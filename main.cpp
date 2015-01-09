@@ -30,6 +30,19 @@ typedef struct {
 	SDL_bool w, a, s, d;
 } Input;
 
+typedef struct {
+	GLfloat x, y, z;
+} Point;
+
+typedef struct {
+	int *verts;
+	int nVerts;
+	int *texCoords;
+	int *vertNorms;
+	int nTexCoords;
+	int nVertNorms;
+} MeshFace;
+
 //-----------------------------------------------------------------------------
 Input pl_input;
 GLenum glError;
@@ -269,11 +282,14 @@ int SDL_main(int argc, char *argv[]) {
 		}
 	} while(!feof(obj_file));
 
-	int numVerts = 0;
-	float *verts = NULL;
+	int n1 = 0;
+	Point *v1 = NULL;
 
-	int numTexsco = 0;
-	float *texsco = NULL;
+	int n2 = 0;
+	Point *v2 = NULL;
+
+	int n3 = 0;
+	MeshFace *v3 = NULL;
 
 	int i, j;
 	for(j=0; j<numl; j++) {
@@ -284,41 +300,47 @@ int SDL_main(int argc, char *argv[]) {
 		if(lines[j][0] == 'v' && lines[j][1] == ' ') {
 			// NOTE: parse the vertex and add it to the array
 
-			numVerts += 3;
-			verts = (float *)realloc(verts, numVerts*sizeof(float));
+			v1 = (Point *)realloc(v1, ++n1*sizeof(Point));
 
-			float x = 0, y = 0, z = 0;
-			sscanf(lines[j], "v %f %f %f", &x, &y, &z);
-			printf("[%f, %f, %f]\n", x, y, z);
-
-			verts[numVerts-3] = x;
-			verts[numVerts-2] = y;
-			verts[numVerts-1] = z;
+			sscanf(lines[j], "v %f %f %f", &v1[n1-1].x, &v1[n1-1].y, &v1[n1-1].z);
+			printf("[%f, %f, %f]\n", v1[n1-1].x, v1[n1-1].y, v1[n1-1].z);
 
 		} else if(lines[j][0] == 'v' && lines[j][1] == 't' && lines[j][2] == ' ') {
 			// NOTE: parse the texture coordinates
 
-			numTexsco += 3;
-			texsco = (float *)realloc(texsco, numTexsco*sizeof(float));
+			v2 = (Point *)realloc(v2, ++n2*sizeof(Point));
 
-			float x = 0, y = 0, z = 0;
-			sscanf(lines[j], "vt %f %f %f", &x, &y, &z);
-			printf("[%f, %f, %f]\n", x, y, z);
-
-			texsco[numTexsco-3] = x;
-			texsco[numTexsco-2] = y;
-			texsco[numTexsco-1] = z;
+			sscanf(lines[j], "vt %f %f %f", &v2[n2-1].x, &v2[n2-1].y, &v2[n2-1].z);
+			printf("[%f, %f, %f]\n", v2[n2-1].x, v2[n2-1].y, v2[n2-1].z);
 			
 		} else if(lines[j][0] == 'f' && lines[j][1] == ' ') {
 			// NOTE: parse the face elements
 
+			v3 = (MeshFace *)realloc(v3, ++n3*sizeof(MeshFace));
+
+			v3[n3-1].nVerts = 0;
+			v3[n3-1].verts = NULL;
+
+			v3[n3-1].nTexCoords = 0;
+			v3[n3-1].texCoords = NULL;
+
+			v3[n3-1].nVertNorms = 0;
+			v3[n3-1].vertNorms = NULL;
+
 			int c;
 			for(c=1; c<strlen(lines[j]); c++) {
 
-				int vi = 0, vti = 0, vni = 0;
+				int m1 = v3[n3-1].nVerts;
+				int m2 = v3[n3-1].nTexCoords;
+				int m3 = v3[n3-1].nVertNorms;
+
+				v3[n3-1].verts = (int *)realloc(v3[n3-1].verts, ++v3[n3-1].nVerts*sizeof(int));
+				v3[n3-1].texCoords = (int *)realloc(v3[n3-1].texCoords, ++v3[n3-1].nTexCoords*sizeof(int));
+				v3[n3-1].vertNorms = (int *)realloc(v3[n3-1].vertNorms, ++v3[n3-1].nVertNorms*sizeof(int));
+
 				if(lines[j][c] == ' ') {
-					sscanf(&lines[j][c], " %d/%d/%d", &vi, &vti, &vni);
-					printf("[%d, %d, %d]\n", vi, vti, vni);
+					sscanf(&lines[j][c], " %d/%d/%d", &v3[n3-1].verts[m1], &v3[n3-1].texCoords[m2], &v3[n3-1].vertNorms[m3]);
+					printf("[%d, %d, %d]\n", v3[n3-1].verts[m1], v3[n3-1].texCoords[m2], v3[n3-1].vertNorms[m3]);
 				}
 
 				// TODO: will have to handle the case when normals are left out
