@@ -310,8 +310,8 @@ int SDL_main(int argc, char *argv[]) {
 
 			v2 = (Point *)realloc(v2, ++n2*sizeof(Point));
 
-			sscanf(lines[j], "vt %f %f %f", &v2[n2-1].x, &v2[n2-1].y, &v2[n2-1].z);
-			printf("[%f, %f, %f]\n", v2[n2-1].x, v2[n2-1].y, v2[n2-1].z);
+			sscanf(lines[j], "vt %f %f", &v2[n2-1].x, &v2[n2-1].y);
+			printf("[%f, %f]\n", v2[n2-1].x, v2[n2-1].y);
 			
 		} else if(lines[j][0] == 'f' && lines[j][1] == ' ') {
 			// NOTE: parse the face elements
@@ -330,15 +330,15 @@ int SDL_main(int argc, char *argv[]) {
 			int c;
 			for(c=1; c<strlen(lines[j]); c++) {
 
-				int m1 = v3[n3-1].nVerts;
-				int m2 = v3[n3-1].nTexCoords;
-				int m3 = v3[n3-1].nVertNorms;
-
-				v3[n3-1].verts = (int *)realloc(v3[n3-1].verts, ++v3[n3-1].nVerts*sizeof(int));
-				v3[n3-1].texCoords = (int *)realloc(v3[n3-1].texCoords, ++v3[n3-1].nTexCoords*sizeof(int));
-				v3[n3-1].vertNorms = (int *)realloc(v3[n3-1].vertNorms, ++v3[n3-1].nVertNorms*sizeof(int));
-
 				if(lines[j][c] == ' ') {
+					int m1 = v3[n3-1].nVerts;
+					int m2 = v3[n3-1].nTexCoords;
+					int m3 = v3[n3-1].nVertNorms;
+
+					v3[n3-1].verts = (int *)realloc(v3[n3-1].verts, ++v3[n3-1].nVerts*sizeof(int));
+					v3[n3-1].texCoords = (int *)realloc(v3[n3-1].texCoords, ++v3[n3-1].nTexCoords*sizeof(int));
+					v3[n3-1].vertNorms = (int *)realloc(v3[n3-1].vertNorms, ++v3[n3-1].nVertNorms*sizeof(int));
+
 					sscanf(&lines[j][c], " %d/%d/%d", &v3[n3-1].verts[m1], &v3[n3-1].texCoords[m2], &v3[n3-1].vertNorms[m3]);
 					printf("[%d, %d, %d]\n", v3[n3-1].verts[m1], v3[n3-1].texCoords[m2], v3[n3-1].vertNorms[m3]);
 				}
@@ -432,6 +432,26 @@ int SDL_main(int argc, char *argv[]) {
 		-0.5f,  0.5f,  0.5f, 0.0f, 0.0f,
 		-0.5f,  0.5f, -0.5f, 0.0f, 1.0f
 	};
+	/*
+	int numVerts = 0;
+	GLfloat *vertices = NULL;
+
+	for(j=0; j<n3; j++) {
+		for(i=0; i<v3[j].nVerts; i++) {
+			int vi = v3[j].verts[i]-1;
+			int vti = v3[j].texCoords[i]-1;
+
+			numVerts += 5;
+			vertices = (GLfloat *)realloc(vertices, numVerts*sizeof(GLfloat));
+
+			vertices[numVerts-5] = v1[vi].x;
+			vertices[numVerts-4] = v1[vi].y;
+			vertices[numVerts-3] = v1[vi].z;
+			vertices[numVerts-2] = v2[vti].x;
+			vertices[numVerts-1] = v2[vti].y;
+		}
+	}
+	*/
 
 	// NOTE: allocate an array buffer on the GPU
 	GLuint verBuffer;
@@ -441,6 +461,7 @@ int SDL_main(int argc, char *argv[]) {
 	glBindBuffer(GL_ARRAY_BUFFER, verBuffer);
 
 	// NOTE: send our vertex data to the GPU and set as STAIC
+	//glBufferData(GL_ARRAY_BUFFER, numVerts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	// NOTE: get a pointer to the position attribute variable in the shader
@@ -562,12 +583,10 @@ int SDL_main(int argc, char *argv[]) {
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f)
 	);
-
 	GLint uniView = glGetUniformLocation(shaderProgram, "view");
 	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
 	glm::mat4 proj = glm::perspective(45.0f, 800.0f / 600.0f, 1.0f, 10.0f);
-
 	GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
 	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
@@ -667,6 +686,7 @@ int SDL_main(int argc, char *argv[]) {
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
 		// NOTE: draw to the screen
+		//glDrawArrays(GL_TRIANGLES, 0, numVerts);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
