@@ -1,6 +1,6 @@
 /* Prototype
-g++ main.cpp -o test.exe -I./include -L./lib -lmingw32 -lmingw32 -lglew32 -lopengl32 -lSDL2main -lSDL2
-running on G++ 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
+g++ main.cpp -o test.exe -I./include -L./lib -lmingw32 -lglew32 -lopengl32 -lSDL2main -lSDL2
+running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 */
 
 //-----------------------------------------------------------------------------
@@ -29,19 +29,6 @@ typedef struct {
 	SDL_bool m_right;
 	SDL_bool w, a, s, d;
 } Input;
-
-typedef struct {
-	GLfloat x, y, z;
-} Point;
-
-typedef struct {
-	int *verts;
-	int nVerts;
-	int *texCoords;
-	int *vertNorms;
-	int nTexCoords;
-	int nVertNorms;
-} MeshFace;
 
 //-----------------------------------------------------------------------------
 Input pl_input;
@@ -282,14 +269,16 @@ int SDL_main(int argc, char *argv[]) {
 		}
 	} while(!feof(obj_file));
 
-	int n1 = 0;
-	Point *v1 = NULL;
+	int numVerts = 0;
+	float *verts = NULL;
 
-	int n2 = 0;
-	Point *v2 = NULL;
+	int numTexsco = 0;
+	float *texsco = NULL;
 
-	int n3 = 0;
-	MeshFace *v3 = NULL;
+	int numIndices = 0;
+	int *indices = NULL;
+
+	int numFaces = 0;
 
 	int i, j;
 	for(j=0; j<numl; j++) {
@@ -300,47 +289,49 @@ int SDL_main(int argc, char *argv[]) {
 		if(lines[j][0] == 'v' && lines[j][1] == ' ') {
 			// NOTE: parse the vertex and add it to the array
 
-			v1 = (Point *)realloc(v1, ++n1*sizeof(Point));
+			numVerts += 3;
+			verts = (float *)realloc(verts, numVerts*sizeof(float));
 
-			sscanf(lines[j], "v %f %f %f", &v1[n1-1].x, &v1[n1-1].y, &v1[n1-1].z);
-			printf("[%f, %f, %f]\n", v1[n1-1].x, v1[n1-1].y, v1[n1-1].z);
+			float x = 0, y = 0, z = 0;
+			sscanf(lines[j], "v %f %f %f", &x, &y, &z);
+			printf("[%f, %f, %f]\n", x, y, z);
+
+			verts[numVerts-3] = x;
+			verts[numVerts-2] = y;
+			verts[numVerts-1] = z;
 
 		} else if(lines[j][0] == 'v' && lines[j][1] == 't' && lines[j][2] == ' ') {
 			// NOTE: parse the texture coordinates
 
-			v2 = (Point *)realloc(v2, ++n2*sizeof(Point));
+			numTexsco += 3;
+			texsco = (float *)realloc(texsco, numTexsco*sizeof(float));
 
-			sscanf(lines[j], "vt %f %f", &v2[n2-1].x, &v2[n2-1].y);
-			printf("[%f, %f]\n", v2[n2-1].x, v2[n2-1].y);
+			float x = 0, y = 0, z = 0;
+			sscanf(lines[j], "vt %f %f %f", &x, &y, &z);
+			printf("[%f, %f, %f]\n", x, y, z);
+
+			texsco[numTexsco-3] = x;
+			texsco[numTexsco-2] = y;
+			texsco[numTexsco-1] = z;
 			
 		} else if(lines[j][0] == 'f' && lines[j][1] == ' ') {
 			// NOTE: parse the face elements
-
-			v3 = (MeshFace *)realloc(v3, ++n3*sizeof(MeshFace));
-
-			v3[n3-1].nVerts = 0;
-			v3[n3-1].verts = NULL;
-
-			v3[n3-1].nTexCoords = 0;
-			v3[n3-1].texCoords = NULL;
-
-			v3[n3-1].nVertNorms = 0;
-			v3[n3-1].vertNorms = NULL;
+			numFaces++;
 
 			int c;
 			for(c=1; c<strlen(lines[j]); c++) {
 
+				int vi = 0, vti = 0, vni = 0;
 				if(lines[j][c] == ' ') {
-					int m1 = v3[n3-1].nVerts;
-					int m2 = v3[n3-1].nTexCoords;
-					int m3 = v3[n3-1].nVertNorms;
+					numIndices += 3;
+					indices = (int *)realloc(indices, numIndices*sizeof(int));
 
-					v3[n3-1].verts = (int *)realloc(v3[n3-1].verts, ++v3[n3-1].nVerts*sizeof(int));
-					v3[n3-1].texCoords = (int *)realloc(v3[n3-1].texCoords, ++v3[n3-1].nTexCoords*sizeof(int));
-					v3[n3-1].vertNorms = (int *)realloc(v3[n3-1].vertNorms, ++v3[n3-1].nVertNorms*sizeof(int));
+					sscanf(&lines[j][c], " %d/%d/%d", &vi, &vti, &vni);
+					printf("[%d, %d, %d]\n", vi, vti, vni);
 
-					sscanf(&lines[j][c], " %d/%d/%d", &v3[n3-1].verts[m1], &v3[n3-1].texCoords[m2], &v3[n3-1].vertNorms[m3]);
-					printf("[%d, %d, %d]\n", v3[n3-1].verts[m1], v3[n3-1].texCoords[m2], v3[n3-1].vertNorms[m3]);
+					indices[numIndices-3] = vi;
+					indices[numIndices-2] = vti;
+					indices[numIndices-1] = vni;
 				}
 
 				// TODO: will have to handle the case when normals are left out
@@ -380,6 +371,19 @@ int SDL_main(int argc, char *argv[]) {
 		need to do is bind a different vertex array object
 	*/
 
+	float vertices[5*(numVerts/3)];
+	memset(vertices, 0x00, sizeof(float)*5*(numVerts/3));
+
+	int tempIndex = 0;
+	for(; tempIndex<(numVerts/3); tempIndex++) {
+		vertices[5*tempIndex+0] = verts[3*tempIndex+0];
+		vertices[5*tempIndex+1] = verts[3*tempIndex+1];
+		vertices[5*tempIndex+2] = verts[3*tempIndex+2];
+
+		vertices[5*tempIndex+3] = texsco[3*tempIndex+0];
+		vertices[5*tempIndex+4] = texsco[3*tempIndex+1];
+	}
+
 	// NOTE: vertices for a triangle (clockwise)
 	/*
 	float vertices[] = {
@@ -388,7 +392,6 @@ int SDL_main(int argc, char *argv[]) {
 		 0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
 		-0.5f, -0.5f, 0.0f, 0.0f, 1.0f
 	};
-	*/
 	float vertices[] = {
 		-0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
 		 0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
@@ -432,25 +435,6 @@ int SDL_main(int argc, char *argv[]) {
 		-0.5f,  0.5f,  0.5f, 0.0f, 0.0f,
 		-0.5f,  0.5f, -0.5f, 0.0f, 1.0f
 	};
-	/*
-	int numVerts = 0;
-	GLfloat *vertices = NULL;
-
-	for(j=0; j<n3; j++) {
-		for(i=0; i<v3[j].nVerts; i++) {
-			int vi = v3[j].verts[i]-1;
-			int vti = v3[j].texCoords[i]-1;
-
-			numVerts += 5;
-			vertices = (GLfloat *)realloc(vertices, numVerts*sizeof(GLfloat));
-
-			vertices[numVerts-5] = v1[vi].x;
-			vertices[numVerts-4] = v1[vi].y;
-			vertices[numVerts-3] = v1[vi].z;
-			vertices[numVerts-2] = v2[vti].x;
-			vertices[numVerts-1] = v2[vti].y;
-		}
-	}
 	*/
 
 	// NOTE: allocate an array buffer on the GPU
@@ -461,7 +445,6 @@ int SDL_main(int argc, char *argv[]) {
 	glBindBuffer(GL_ARRAY_BUFFER, verBuffer);
 
 	// NOTE: send our vertex data to the GPU and set as STAIC
-	//glBufferData(GL_ARRAY_BUFFER, numVerts*sizeof(GLfloat), vertices, GL_STATIC_DRAW);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	// NOTE: get a pointer to the position attribute variable in the shader
@@ -497,10 +480,32 @@ int SDL_main(int argc, char *argv[]) {
 	// ========================================================================
 
 	// NOTE: index into the raw vertex array
+
+	GLuint elements[6*numFaces];
+	memset(elements, 0x00, sizeof(GLuint)*6*numFaces);
+
+
+	tempIndex = 0;
+	for(; tempIndex<numFaces; tempIndex++) {
+		int ind0 = indices[4*3*tempIndex+0];
+		int ind1 = indices[4*3*tempIndex+3];
+		int ind2 = indices[4*3*tempIndex+6];
+		int ind3 = indices[4*3*tempIndex+9];
+
+		elements[6*tempIndex+0] = ind0-1;
+		elements[6*tempIndex+1] = ind1-1;
+		elements[6*tempIndex+2] = ind2-1;
+		elements[6*tempIndex+3] = ind2-1;
+		elements[6*tempIndex+4] = ind3-1;
+		elements[6*tempIndex+5] = ind0-1;
+	}
+
+	/*
 	GLuint elements[] = {
 		0, 1, 2,
 		2, 3, 0
 	};
+	*/
 
 	// NOTE: allocate a GPU buffer for the element data
 	GLuint eleBuffer;
@@ -529,7 +534,7 @@ int SDL_main(int argc, char *argv[]) {
 	glBindTexture(GL_TEXTURE_2D, tex);
 
 	// NOTE: load the bitmap SDL surface for texture pixels
-	SDL_Surface *surface = SDL_LoadBMP("tex00.bmp");
+	SDL_Surface *surface = SDL_LoadBMP("tex01.bmp");
 
 	if(surface == NULL) {
 		fprintf(stderr, "SDL_LoadBMP: %s\n", SDL_GetError());
@@ -572,21 +577,24 @@ int SDL_main(int argc, char *argv[]) {
 	// ========================================================================
 
 	glm::mat4 model;
-	//float angle = (float) M_PI / 500.0f;
+	float angle = (float) M_PI / 500.0f;
 	//model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
+	float pDist = 4.2f;
 	glm::mat4 view = glm::lookAt(
-		glm::vec3(1.2f, 1.2f, 1.2f),
+		glm::vec3(pDist, pDist, pDist),
 		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 0.0f, 1.0f)
+		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
+
 	GLint uniView = glGetUniformLocation(shaderProgram, "view");
 	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-	glm::mat4 proj = glm::perspective(45.0f, 800.0f / 600.0f, 1.0f, 10.0f);
+	glm::mat4 proj = glm::perspective(45.0f, 800.0f / 600.0f, 1.0f, 256.0f);
+
 	GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
 	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
@@ -665,6 +673,40 @@ int SDL_main(int argc, char *argv[]) {
 			}
 		}
 
+		if(pl_input.up) {
+			pDist -= 0.05f;
+			glm::mat4 view = glm::lookAt(
+				glm::vec3(pDist, pDist, pDist),
+				glm::vec3(0.0f, 0.0f, 0.0f),
+				glm::vec3(0.0f, 1.0f, 0.0f)
+			);
+
+			GLint uniView = glGetUniformLocation(shaderProgram, "view");
+			glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+		}
+
+		if(pl_input.down) {
+			pDist += 0.05f;
+			glm::mat4 view = glm::lookAt(
+				glm::vec3(pDist, pDist, pDist),
+				glm::vec3(0.0f, 0.0f, 0.0f),
+				glm::vec3(0.0f, 1.0f, 0.0f)
+			);
+
+			GLint uniView = glGetUniformLocation(shaderProgram, "view");
+			glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+		}
+
+		if(pl_input.left) {
+			model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+			glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+		}
+
+		if(pl_input.right) {
+			model = glm::rotate(model, -angle, glm::vec3(0.0f, 1.0f, 0.0f));
+			glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+		}
+
 		uint8_t b_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_B);
 		if(b_bnt) running = SDL_FALSE;
 
@@ -686,8 +728,10 @@ int SDL_main(int argc, char *argv[]) {
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
 		// NOTE: draw to the screen
-		//glDrawArrays(GL_TRIANGLES, 0, numVerts);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		//glDrawArrays(GL_TRIANGLES, 0, (4*numFaces));
+		//glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		glDrawElements(GL_TRIANGLES, 6*numFaces, GL_UNSIGNED_INT, 0);
 		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		/* END TESTING */
