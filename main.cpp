@@ -20,6 +20,157 @@ running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 
 //-----------------------------------------------------------------------------
 typedef struct {
+	int n;
+	char** lines;
+	char* filename;
+} ObjFile;
+
+void loadObjFile(ObjFile* objfile) {
+	if(objfile->lines) {
+		int i;
+		for(i=0; i<objfile->n; i++) {
+			free(objfile->lines[i]);
+		} free(objfile->lines);
+	}
+
+	objfile->n = 0;
+	objfile->lines = NULL;
+
+	if(objfile->filename==NULL) return;
+	FILE* fp = fopen(objfile->filename, "r");
+
+	do {
+		char c;
+		int colInd = 0;
+
+		objfile->lines = (char**) realloc(objfile->lines, ++objfile->n*sizeof(char*));
+		objfile->lines[objfile->n-1] = NULL;
+
+		do {
+			fread(&c, sizeof(char), 1, fp);
+
+			// NOTE: strip newlines
+			if(c!='\n') {
+				if(colInd>0) {
+					// NOTE: strip extra spaces
+					if(!(objfile->lines[objfile->n-1][colInd-1]==' ' && c==' ')) {
+						objfile->lines[objfile->n-1] = (char*) realloc(objfile->lines[objfile->n-1], ++colInd*sizeof(char));
+						objfile->lines[objfile->n-1][colInd-1] = c;
+					}
+				} else {
+					objfile->lines[objfile->n-1] = (char*) realloc(objfile->lines[objfile->n-1], ++colInd*sizeof(char));
+					objfile->lines[objfile->n-1][colInd-1] = c;
+				}
+			}
+		} while(c!='\n');
+
+		// NOTE: end with a null terminator
+		objfile->lines[objfile->n-1] = (char*) realloc(objfile->lines[objfile->n-1], ++colInd*sizeof(char));
+		objfile->lines[objfile->n-1][colInd-1] = '\0';
+
+		if(objfile->lines[objfile->n-1][0]=='#') {
+			// NOTE: ignore comments
+
+			free(objfile->lines[objfile->n-1]);
+			objfile->lines[objfile->n-1] = NULL;
+
+			objfile->lines = (char**) realloc(objfile->lines, --objfile->n*sizeof(char*));
+		} else if(objfile->lines[objfile->n-1][0]=='\0') {
+			// NOTE: ignore blank lines
+
+			free(objfile->lines[objfile->n-1]);
+			objfile->lines[objfile->n-1] = NULL;
+
+			objfile->lines = (char**) realloc(objfile->lines, --objfile->n*sizeof(char*));
+		}
+	} while(!feof(fp));
+
+	fclose(fp);
+	fp = NULL;
+}
+
+//-----------------------------------------------------------------------------
+/*
+typedef struct {
+} Mesh;
+
+void loadMesh(Mesh* mesh, ObjFile* objfile) {
+	int n[4] = {};
+
+	int* indices = NULL;
+	float* vertsPos = NULL;
+	float* vertsTex = NULL;
+
+	//int numVerts = 0;
+	//float* verts = NULL;
+
+	//int numTexsco = 0;
+	//float* texsco = NULL;
+
+	//int numIndices = 0;
+	//int* indices = NULL;
+
+	//int numFaces = 0;
+
+	int i;
+	for(i=0; i<objfile->n; i++) {
+		// NOTE: parse the file
+
+		if(objfile->lines[i][0] == 'v' && objfile->lines[i][1] == ' ') {
+			// NOTE: parse the vertex and add it to the array
+
+			numVerts += 3;
+			verts = (float *)realloc(verts, numVerts*sizeof(float));
+
+			float x = 0, y = 0, z = 0;
+			sscanf(objfile->lines[i], "v %f %f %f", &x, &y, &z);
+
+			verts[numVerts-3] = x;
+			verts[numVerts-2] = y;
+			verts[numVerts-1] = z;
+
+		} else if(objfile->lines[i][0] == 'v' && objfile->lines[i][1] == 't' && objfile->lines[i][2] == ' ') {
+			// NOTE: parse the texture coordinates
+
+			numTexsco += 3;
+			texsco = (float *)realloc(texsco, numTexsco*sizeof(float));
+
+			float x = 0, y = 0, z = 0;
+			sscanf(objfile->lines[i], "vt %f %f %f", &x, &y, &z);
+
+			texsco[numTexsco-3] = x;
+			texsco[numTexsco-2] = y;
+			texsco[numTexsco-1] = z;
+			
+		} else if(objfile->lines[i][0] == 'f' && objfile->lines[i][1] == ' ') {
+			// NOTE: parse the face elements
+			numFaces++;
+
+			int c;
+			for(c=1; c<strlen(objfile->lines[i]); c++) {
+
+				int vi = 0, vti = 0, vni = 0;
+				if(objfile->lines[i][c] == ' ') {
+					numIndices += 3;
+					indices = (int *)realloc(indices, numIndices*sizeof(int));
+
+					sscanf(&objfile->lines[i][c], " %d/%d/%d", &vi, &vti, &vni);
+
+					indices[numIndices-3] = vi;
+					indices[numIndices-2] = vti;
+					indices[numIndices-1] = vni;
+				}
+
+				// TODO: will have to handle the case when normals are left out
+				// or when texture indices are left out
+			}
+		}
+	}
+}
+*/
+
+//-----------------------------------------------------------------------------
+typedef struct {
 	SDL_bool up;
 	int m_x, m_y;
 	SDL_bool down;
@@ -216,58 +367,11 @@ int SDL_main(int argc, char *argv[]) {
 		return 0;
 	}
 
-	// NOTE: open the file
-	FILE *obj_file = fopen(argv[1], "r");
+	ObjFile objfile = {};
+	objfile.filename = argv[1];
+	loadObjFile(&objfile);
 
-	int numl = 0;
-	char **lines = NULL;
 
-	do {
-		int numc = 0;
-
-		lines = (char **)realloc(lines, ++numl*sizeof(char *));
-		lines[numl-1] = NULL;
-
-		char obj_p;
-		do {
-			fread(&obj_p, sizeof(char), 1, obj_file);
-
-			// NOTE: strip newlines
-			if(obj_p != '\n') {
-				if(numc>0) {
-					// NOTE: strip extra spaces
-					if(!(lines[numl-1][numc-1]==' ' && obj_p==' ')) {
-						lines[numl-1] = (char *)realloc(lines[numl-1], ++numc*sizeof(char));
-						lines[numl-1][numc-1] = obj_p;
-					}
-				} else {
-					lines[numl-1] = (char *)realloc(lines[numl-1], ++numc*sizeof(char));
-					lines[numl-1][numc-1] = obj_p;
-				}
-			}
-
-		} while(obj_p != '\n');
-
-		// NOTE: end with a null terminator
-		lines[numl-1] = (char *)realloc(lines[numl-1], ++numc*sizeof(char));
-		lines[numl-1][numc-1] = '\0';
-
-		if(lines[numl-1][0] == '#') {
-			// NOTE: ignore comments
-
-			free(lines[numl-1]);
-			lines[numl-1] = NULL;
-
-			lines = (char **)realloc(lines, --numl*sizeof(char *));
-		} else if(lines[numl-1][0] == '\0') {
-			// NOTE: ignore blank lines
-
-			free(lines[numl-1]);
-			lines[numl-1] = NULL;
-
-			lines = (char **)realloc(lines, --numl*sizeof(char *));
-		}
-	} while(!feof(obj_file));
 
 	int numVerts = 0;
 	float *verts = NULL;
@@ -281,52 +385,52 @@ int SDL_main(int argc, char *argv[]) {
 	int numFaces = 0;
 
 	int i, j;
-	for(j=0; j<numl; j++) {
+	for(j=0; j<objfile.n; j++) {
 		// NOTE: parse the file
 
-		printf("%s\n", lines[j]);
+		printf("%s\n", objfile.lines[j]);
 
-		if(lines[j][0] == 'v' && lines[j][1] == ' ') {
+		if(objfile.lines[j][0] == 'v' && objfile.lines[j][1] == ' ') {
 			// NOTE: parse the vertex and add it to the array
 
 			numVerts += 3;
 			verts = (float *)realloc(verts, numVerts*sizeof(float));
 
 			float x = 0, y = 0, z = 0;
-			sscanf(lines[j], "v %f %f %f", &x, &y, &z);
+			sscanf(objfile.lines[j], "v %f %f %f", &x, &y, &z);
 			printf("[%f, %f, %f]\n", x, y, z);
 
 			verts[numVerts-3] = x;
 			verts[numVerts-2] = y;
 			verts[numVerts-1] = z;
 
-		} else if(lines[j][0] == 'v' && lines[j][1] == 't' && lines[j][2] == ' ') {
+		} else if(objfile.lines[j][0] == 'v' && objfile.lines[j][1] == 't' && objfile.lines[j][2] == ' ') {
 			// NOTE: parse the texture coordinates
 
 			numTexsco += 3;
 			texsco = (float *)realloc(texsco, numTexsco*sizeof(float));
 
 			float x = 0, y = 0, z = 0;
-			sscanf(lines[j], "vt %f %f %f", &x, &y, &z);
+			sscanf(objfile.lines[j], "vt %f %f %f", &x, &y, &z);
 			printf("[%f, %f, %f]\n", x, y, z);
 
 			texsco[numTexsco-3] = x;
 			texsco[numTexsco-2] = y;
 			texsco[numTexsco-1] = z;
 			
-		} else if(lines[j][0] == 'f' && lines[j][1] == ' ') {
+		} else if(objfile.lines[j][0] == 'f' && objfile.lines[j][1] == ' ') {
 			// NOTE: parse the face elements
 			numFaces++;
 
 			int c;
-			for(c=1; c<strlen(lines[j]); c++) {
+			for(c=1; c<strlen(objfile.lines[j]); c++) {
 
 				int vi = 0, vti = 0, vni = 0;
-				if(lines[j][c] == ' ') {
+				if(objfile.lines[j][c] == ' ') {
 					numIndices += 3;
 					indices = (int *)realloc(indices, numIndices*sizeof(int));
 
-					sscanf(&lines[j][c], " %d/%d/%d", &vi, &vti, &vni);
+					sscanf(&objfile.lines[j][c], " %d/%d/%d", &vi, &vti, &vni);
 					printf("[%d, %d, %d]\n", vi, vti, vni);
 
 					indices[numIndices-3] = vi;
@@ -342,6 +446,7 @@ int SDL_main(int argc, char *argv[]) {
 		printf("\n");
 	}
 
+	/*
 	for(i=0; i<numl; i++) {
 		free(lines[i]);
 	}
@@ -351,6 +456,7 @@ int SDL_main(int argc, char *argv[]) {
 	// NOTE: close the file
 	fclose(obj_file);
 	obj_file = NULL;
+	*/
 
 	/* END TEST OBJ FILE PARSING */
 	// ========================================================================
@@ -646,6 +752,7 @@ int SDL_main(int argc, char *argv[]) {
 				// NOTE: set any pressed keys to the down position
 				case SDL_KEYDOWN: {
 					switch(event.key.keysym.sym) {
+						case SDLK_ESCAPE: running = SDL_FALSE; break;
 						case SDLK_w: pl_input.w = SDL_TRUE; break;
 						case SDLK_a: pl_input.a = SDL_TRUE; break;
 						case SDLK_s: pl_input.s = SDL_TRUE; break;
