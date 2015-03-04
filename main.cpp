@@ -33,13 +33,6 @@ typedef struct {
 	GLsizeiptr num; // num of triangles
 } IndInfo;
 
-/*
-IndInfo* inds;
-VertInfo* verts;
-
-loadObjFile(&verts, &inds, "test.obj");
-*/
-
 //-----------------------------------------------------------------------------
 void loadObjFile(VertInfo** verts, IndInfo** inds, const char* filename) {
 	if(*verts) {
@@ -422,7 +415,7 @@ int SDL_main(int argc, char *argv[]) {
 	IndInfo* inds = NULL;
 	VertInfo* verts = NULL;
 
-	loadObjFile(&verts, &inds, "test.obj");
+	loadObjFile(&verts, &inds, argv[1]);
 
 	/*
 	ObjFile objfile = {};
@@ -536,23 +529,18 @@ int SDL_main(int argc, char *argv[]) {
 		need to do is bind a different vertex array object
 	*/
 
-	int numVerts = 6;
-	int numFaces = 6;
+	GLfloat glVerts[5*verts->num];
+	memset(glVerts, 0x00, 5*verts->num*sizeof(GLfloat));
 
-	float vertices[5*(numVerts/3)];
-	memset(vertices, 0x00, sizeof(float)*5*(numVerts/3));
+	int tempInd = 0;
+	for(; tempInd<verts->num; tempInd++) {
+		glVerts[5*tempInd+0] = verts->pos[3*tempInd+0];
+		glVerts[5*tempInd+1] = verts->pos[3*tempInd+1];
+		glVerts[5*tempInd+2] = verts->pos[3*tempInd+2];
 
-	/*
-	int tempIndex = 0;
-	for(; tempIndex<(numVerts/3); tempIndex++) {
-		vertices[5*tempIndex+0] = verts[3*tempIndex+0];
-		vertices[5*tempIndex+1] = verts[3*tempIndex+1];
-		vertices[5*tempIndex+2] = verts[3*tempIndex+2];
-
-		vertices[5*tempIndex+3] = texsco[3*tempIndex+0];
-		vertices[5*tempIndex+4] = texsco[3*tempIndex+1];
+		glVerts[5*tempInd+3] = verts->tex[2*tempInd+0];
+		glVerts[5*tempInd+4] = verts->tex[2*tempInd+1];
 	}
-	*/
 
 	// NOTE: vertices for a triangle (clockwise)
 	/*
@@ -615,7 +603,7 @@ int SDL_main(int argc, char *argv[]) {
 	glBindBuffer(GL_ARRAY_BUFFER, verBuffer);
 
 	// NOTE: send our vertex data to the GPU and set as STAIC
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 5*verts->num*sizeof(GLfloat), glVerts, GL_STATIC_DRAW);
 
 	// NOTE: get a pointer to the position attribute variable in the shader
 	// program
@@ -651,8 +639,10 @@ int SDL_main(int argc, char *argv[]) {
 
 	// NOTE: index into the raw vertex array
 
-	GLuint elements[6*numFaces];
-	memset(elements, 0x00, sizeof(GLuint)*6*numFaces);
+	/*
+	GLuint glElems[6*inds->num];
+	memset(glElems, 0x00, 6*inds->num*sizeof(GLuint));
+	*/
 
 	/*
 	tempIndex = 0;
@@ -686,7 +676,7 @@ int SDL_main(int argc, char *argv[]) {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eleBuffer);
 
 	// NOTE: send our element data to the GPU and set as STAIC
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, inds->num*sizeof(GLuint), inds->pos, GL_STATIC_DRAW);
 
 	/* END SET ELEMENT INFORMATION */
 	// ========================================================================
@@ -903,7 +893,8 @@ int SDL_main(int argc, char *argv[]) {
 		//glDrawArrays(GL_TRIANGLES, 0, (4*numFaces));
 		//glDrawArrays(GL_TRIANGLES, 0, 36);
 
-		glDrawElements(GL_TRIANGLES, 6*numFaces, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, inds->num, GL_UNSIGNED_INT, 0);
+		//glDrawElements(GL_TRIANGLES, 6*numFaces, GL_UNSIGNED_INT, 0);
 		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		/* END TESTING */
