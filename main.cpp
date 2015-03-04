@@ -20,31 +20,58 @@ running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 
 //-----------------------------------------------------------------------------
 typedef struct {
-	int n;
-	char** lines;
-	char* filename;
-} ObjFile;
+	GLfloat* pos;   // (x,y,z)
+	GLfloat* tex;   // (u,v)
+	GLfloat* norm;  // (x,y,z)
+	GLsizeiptr num; // total num of verts
+} VertInfo;
 
-void loadObjFile(ObjFile* objfile) {
-	if(objfile->lines) {
+typedef struct {
+	GLuint* pos;    // 3 pos inds per
+	GLuint* tex;    // 3 tex inds per
+	GLuint* norm;   // 3 norm inds per
+	GLsizeiptr num; // num of triangles
+} IndInfo;
+
+/*
+IndInfo* inds;
+VertInfo* verts;
+
+loadObjFile(&verts, &inds, "test.obj");
+*/
+
+//-----------------------------------------------------------------------------
+void loadObjFile(VertInfo** verts, IndInfo** inds, const char* filename) {
+	if(*verts) {
 		int i;
-		for(i=0; i<objfile->n; i++) {
-			free(objfile->lines[i]);
-		} free(objfile->lines);
-	}
+		for(i=0; i<(*verts)->num; i++) {
+			free((*verts)->pos);
+			free((*verts)->tex);
+			free((*verts)->norm);
+		} (*verts)->num = 0;
+	} else *verts = (VertInfo*) calloc(0x01, sizeof(VertInfo));
 
-	objfile->n = 0;
-	objfile->lines = NULL;
+	if(*inds) {
+		int i;
+		for(i=0; i<(*inds)->num; i++) {
+			free((*inds)->pos);
+			free((*inds)->tex);
+			free((*inds)->norm);
+		} (*inds)->num = 0;
+	} else *inds = (IndInfo*) calloc(0x01, sizeof(IndInfo));
 
-	if(objfile->filename==NULL) return;
-	FILE* fp = fopen(objfile->filename, "r");
+	size_t n = 0;
+	char** lines = NULL;
+
+	if(filename==NULL) return;
+	FILE* fp = fopen(filename, "r");
 
 	do {
 		char c;
 		int colInd = 0;
 
-		objfile->lines = (char**) realloc(objfile->lines, ++objfile->n*sizeof(char*));
-		objfile->lines[objfile->n-1] = NULL;
+		lines = (char**) realloc(lines, ++n*sizeof(char*));
+		lines[n-1] = NULL;
 
 		do {
 			fread(&c, sizeof(char), 1, fp);
@@ -53,121 +80,146 @@ void loadObjFile(ObjFile* objfile) {
 			if(c!='\n') {
 				if(colInd>0) {
 					// NOTE: strip extra spaces
-					if(!(objfile->lines[objfile->n-1][colInd-1]==' ' && c==' ')) {
-						objfile->lines[objfile->n-1] = (char*) realloc(objfile->lines[objfile->n-1], ++colInd*sizeof(char));
-						objfile->lines[objfile->n-1][colInd-1] = c;
+					if(!(lines[n-1][colInd-1]==' ' && c==' ')) {
+						lines[n-1] = (char*) realloc(lines[n-1], ++colInd*sizeof(char));
+						lines[n-1][colInd-1] = c;
 					}
 				} else {
-					objfile->lines[objfile->n-1] = (char*) realloc(objfile->lines[objfile->n-1], ++colInd*sizeof(char));
-					objfile->lines[objfile->n-1][colInd-1] = c;
+					lines[n-1] = (char*) realloc(lines[n-1], ++colInd*sizeof(char));
+					lines[n-1][colInd-1] = c;
 				}
 			}
 		} while(c!='\n');
 
 		// NOTE: end with a null terminator
-		objfile->lines[objfile->n-1] = (char*) realloc(objfile->lines[objfile->n-1], ++colInd*sizeof(char));
-		objfile->lines[objfile->n-1][colInd-1] = '\0';
+		lines[n-1] = (char*) realloc(lines[n-1], ++colInd*sizeof(char));
+		lines[n-1][colInd-1] = '\0';
 
-		if(objfile->lines[objfile->n-1][0]=='#') {
+		if(lines[n-1][0]=='#') {
 			// NOTE: ignore comments
 
-			free(objfile->lines[objfile->n-1]);
-			objfile->lines[objfile->n-1] = NULL;
+			free(lines[n-1]);
+			lines[n-1] = NULL;
 
-			objfile->lines = (char**) realloc(objfile->lines, --objfile->n*sizeof(char*));
-		} else if(objfile->lines[objfile->n-1][0]=='\0') {
+			lines = (char**) realloc(lines, --n*sizeof(char*));
+		} else if(lines[n-1][0]=='\0') {
 			// NOTE: ignore blank lines
 
-			free(objfile->lines[objfile->n-1]);
-			objfile->lines[objfile->n-1] = NULL;
+			free(lines[n-1]);
+			lines[n-1] = NULL;
 
-			objfile->lines = (char**) realloc(objfile->lines, --objfile->n*sizeof(char*));
+			lines = (char**) realloc(lines, --n*sizeof(char*));
 		}
 	} while(!feof(fp));
 
 	fclose(fp);
 	fp = NULL;
-}
 
-//-----------------------------------------------------------------------------
-/*
-typedef struct {
-} Mesh;
-
-void loadMesh(Mesh* mesh, ObjFile* objfile) {
-	int n[4] = {};
-
-	int* indices = NULL;
-	float* vertsPos = NULL;
-	float* vertsTex = NULL;
-
-	//int numVerts = 0;
-	//float* verts = NULL;
-
-	//int numTexsco = 0;
-	//float* texsco = NULL;
-
-	//int numIndices = 0;
-	//int* indices = NULL;
-
-	//int numFaces = 0;
+	size_t numPos = 0;
+	size_t numTex = 0;
 
 	int i;
-	for(i=0; i<objfile->n; i++) {
+	for(i=0; i<n; i++) {
 		// NOTE: parse the file
 
-		if(objfile->lines[i][0] == 'v' && objfile->lines[i][1] == ' ') {
+		printf("%s\n", lines[i]);
+
+		if(lines[i][0]=='v' && lines[i][1]==' ') {
 			// NOTE: parse the vertex and add it to the array
 
-			numVerts += 3;
-			verts = (float *)realloc(verts, numVerts*sizeof(float));
+			(*verts)->num++;
 
-			float x = 0, y = 0, z = 0;
-			sscanf(objfile->lines[i], "v %f %f %f", &x, &y, &z);
+			numPos += 3;
+			(*verts)->pos = (GLfloat*) realloc((*verts)->pos, numPos*sizeof(GLfloat));
 
-			verts[numVerts-3] = x;
-			verts[numVerts-2] = y;
-			verts[numVerts-1] = z;
+			GLfloat x = 0, y = 0, z = 0;
+			sscanf(lines[i], "v %f %f %f", &x, &y, &z);
+			printf("[%f, %f, %f]\n", x, y, z);
 
-		} else if(objfile->lines[i][0] == 'v' && objfile->lines[i][1] == 't' && objfile->lines[i][2] == ' ') {
+			(*verts)->pos[numPos-3] = x;
+			(*verts)->pos[numPos-2] = y;
+			(*verts)->pos[numPos-1] = z;
+
+		} else if(lines[i][0]=='v' && lines[i][1]=='t' && lines[i][2]==' ') {
 			// NOTE: parse the texture coordinates
 
-			numTexsco += 3;
-			texsco = (float *)realloc(texsco, numTexsco*sizeof(float));
+			numTex += 2;
+			(*verts)->tex = (GLfloat*) realloc((*verts)->tex, numTex*sizeof(GLfloat));
 
-			float x = 0, y = 0, z = 0;
-			sscanf(objfile->lines[i], "vt %f %f %f", &x, &y, &z);
+			GLfloat u = 0, v = 0;
+			sscanf(lines[i], "vt %f %f", &u, &v);
+			printf("[%f, %f]\n", u, v);
 
-			texsco[numTexsco-3] = x;
-			texsco[numTexsco-2] = y;
-			texsco[numTexsco-1] = z;
+			(*verts)->tex[numTex-2] = u;
+			(*verts)->tex[numTex-1] = v;
 			
-		} else if(objfile->lines[i][0] == 'f' && objfile->lines[i][1] == ' ') {
+		} else if(lines[i][0] == 'f' && lines[i][1] == ' ') {
 			// NOTE: parse the face elements
-			numFaces++;
 
-			int c;
-			for(c=1; c<strlen(objfile->lines[i]); c++) {
+			int c, num = 0;
+			GLuint* indices = NULL;
 
-				int vi = 0, vti = 0, vni = 0;
-				if(objfile->lines[i][c] == ' ') {
-					numIndices += 3;
-					indices = (int *)realloc(indices, numIndices*sizeof(int));
-
-					sscanf(&objfile->lines[i][c], " %d/%d/%d", &vi, &vti, &vni);
-
-					indices[numIndices-3] = vi;
-					indices[numIndices-2] = vti;
-					indices[numIndices-1] = vni;
-				}
+			for(c=1; c<strlen(lines[i]); c++) {
 
 				// TODO: will have to handle the case when normals are left out
 				// or when texture indices are left out
+
+				// TODO: currently I am assuming 4 indices per face which makes
+				// two triangles (i.e. 6 elements)
+
+				if(lines[i][c]==' ') {
+					num += 3;
+					indices = (GLuint*) realloc(indices, num*sizeof(GLuint));
+
+					GLuint vi = 0, vti = 0, vni = 0;
+					sscanf(&lines[i][c], " %d/%d/%d", &vi, &vti, &vni);
+					printf("[%d, %d, %d]\n", vi, vti, vni);
+
+					indices[num-3] = vi;
+					indices[num-2] = vti;
+					indices[num-1] = vni;
+				}
 			}
+
+			if(num==4*3) {
+
+				// TODO: currently only setting the position index but I need
+				// to set them all eventually
+
+				(*inds)->num += 6;
+
+				(*inds)->pos = (GLuint*) realloc((*inds)->pos, (*inds)->num*sizeof(GLuint));
+				(*inds)->tex = (GLuint*) realloc((*inds)->tex, (*inds)->num*sizeof(GLuint));
+				(*inds)->norm = (GLuint*) realloc((*inds)->norm, (*inds)->num*sizeof(GLuint));
+
+				int pos0 = indices[0];
+				int pos1 = indices[3];
+				int pos2 = indices[6];
+				int pos3 = indices[9];
+
+				(*inds)->pos[(*inds)->num-6] = pos0-1;
+				(*inds)->pos[(*inds)->num-5] = pos1-1;
+				(*inds)->pos[(*inds)->num-4] = pos2-1;
+				(*inds)->pos[(*inds)->num-3] = pos2-1;
+				(*inds)->pos[(*inds)->num-2] = pos3-1;
+				(*inds)->pos[(*inds)->num-1] = pos0-1;
+			}
+
+			free(indices);
+			indices = NULL;
 		}
+
+		printf("\n");
 	}
+
+	for(i=0; i<n; i++) {
+		free(lines[i]);
+		lines[i] = NULL;
+	}
+
+	free(lines);
+	lines = NULL;
 }
-*/
 
 //-----------------------------------------------------------------------------
 typedef struct {
@@ -367,6 +419,12 @@ int SDL_main(int argc, char *argv[]) {
 		return 0;
 	}
 
+	IndInfo* inds = NULL;
+	VertInfo* verts = NULL;
+
+	loadObjFile(&verts, &inds, "test.obj");
+
+	/*
 	ObjFile objfile = {};
 	objfile.filename = argv[1];
 	loadObjFile(&objfile);
@@ -445,6 +503,7 @@ int SDL_main(int argc, char *argv[]) {
 
 		printf("\n");
 	}
+	*/
 
 	/*
 	for(i=0; i<numl; i++) {
@@ -477,9 +536,13 @@ int SDL_main(int argc, char *argv[]) {
 		need to do is bind a different vertex array object
 	*/
 
+	int numVerts = 6;
+	int numFaces = 6;
+
 	float vertices[5*(numVerts/3)];
 	memset(vertices, 0x00, sizeof(float)*5*(numVerts/3));
 
+	/*
 	int tempIndex = 0;
 	for(; tempIndex<(numVerts/3); tempIndex++) {
 		vertices[5*tempIndex+0] = verts[3*tempIndex+0];
@@ -489,6 +552,7 @@ int SDL_main(int argc, char *argv[]) {
 		vertices[5*tempIndex+3] = texsco[3*tempIndex+0];
 		vertices[5*tempIndex+4] = texsco[3*tempIndex+1];
 	}
+	*/
 
 	// NOTE: vertices for a triangle (clockwise)
 	/*
@@ -590,7 +654,7 @@ int SDL_main(int argc, char *argv[]) {
 	GLuint elements[6*numFaces];
 	memset(elements, 0x00, sizeof(GLuint)*6*numFaces);
 
-
+	/*
 	tempIndex = 0;
 	for(; tempIndex<numFaces; tempIndex++) {
 		int ind0 = indices[4*3*tempIndex+0];
@@ -605,6 +669,7 @@ int SDL_main(int argc, char *argv[]) {
 		elements[6*tempIndex+4] = ind3-1;
 		elements[6*tempIndex+5] = ind0-1;
 	}
+	*/
 
 	/*
 	GLuint elements[] = {
