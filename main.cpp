@@ -36,21 +36,25 @@ typedef struct {
 //-----------------------------------------------------------------------------
 void loadObjFile(VertInfo** verts, IndInfo** inds, const char* filename) {
 	if(*verts) {
-		int i;
-		for(i=0; i<(*verts)->num; i++) {
-			free((*verts)->pos);
-			free((*verts)->tex);
-			free((*verts)->norm);
-		} (*verts)->num = 0;
+		free((*verts)->pos);
+		(*verts)->pos = NULL;
+		free((*verts)->tex);
+		(*verts)->tex = NULL;
+		free((*verts)->norm);
+		(*verts)->norm = NULL;
+
+		(*verts)->num = 0;
 	} else *verts = (VertInfo*) calloc(0x01, sizeof(VertInfo));
 
 	if(*inds) {
-		int i;
-		for(i=0; i<(*inds)->num; i++) {
-			free((*inds)->pos);
-			free((*inds)->tex);
-			free((*inds)->norm);
-		} (*inds)->num = 0;
+		free((*inds)->pos);
+		(*inds)->pos = NULL;
+		free((*inds)->tex);
+		(*inds)->tex = NULL;
+		free((*inds)->norm);
+		(*inds)->norm = NULL;
+		
+		(*inds)->num = 0;
 	} else *inds = (IndInfo*) calloc(0x01, sizeof(IndInfo));
 
 	size_t n = 0;
@@ -416,99 +420,7 @@ int SDL_main(int argc, char *argv[]) {
 	VertInfo* verts = NULL;
 
 	loadObjFile(&verts, &inds, argv[1]);
-
-	/*
-	ObjFile objfile = {};
-	objfile.filename = argv[1];
-	loadObjFile(&objfile);
-
-
-
-	int numVerts = 0;
-	float *verts = NULL;
-
-	int numTexsco = 0;
-	float *texsco = NULL;
-
-	int numIndices = 0;
-	int *indices = NULL;
-
-	int numFaces = 0;
-
-	int i, j;
-	for(j=0; j<objfile.n; j++) {
-		// NOTE: parse the file
-
-		printf("%s\n", objfile.lines[j]);
-
-		if(objfile.lines[j][0] == 'v' && objfile.lines[j][1] == ' ') {
-			// NOTE: parse the vertex and add it to the array
-
-			numVerts += 3;
-			verts = (float *)realloc(verts, numVerts*sizeof(float));
-
-			float x = 0, y = 0, z = 0;
-			sscanf(objfile.lines[j], "v %f %f %f", &x, &y, &z);
-			printf("[%f, %f, %f]\n", x, y, z);
-
-			verts[numVerts-3] = x;
-			verts[numVerts-2] = y;
-			verts[numVerts-1] = z;
-
-		} else if(objfile.lines[j][0] == 'v' && objfile.lines[j][1] == 't' && objfile.lines[j][2] == ' ') {
-			// NOTE: parse the texture coordinates
-
-			numTexsco += 3;
-			texsco = (float *)realloc(texsco, numTexsco*sizeof(float));
-
-			float x = 0, y = 0, z = 0;
-			sscanf(objfile.lines[j], "vt %f %f %f", &x, &y, &z);
-			printf("[%f, %f, %f]\n", x, y, z);
-
-			texsco[numTexsco-3] = x;
-			texsco[numTexsco-2] = y;
-			texsco[numTexsco-1] = z;
-			
-		} else if(objfile.lines[j][0] == 'f' && objfile.lines[j][1] == ' ') {
-			// NOTE: parse the face elements
-			numFaces++;
-
-			int c;
-			for(c=1; c<strlen(objfile.lines[j]); c++) {
-
-				int vi = 0, vti = 0, vni = 0;
-				if(objfile.lines[j][c] == ' ') {
-					numIndices += 3;
-					indices = (int *)realloc(indices, numIndices*sizeof(int));
-
-					sscanf(&objfile.lines[j][c], " %d/%d/%d", &vi, &vti, &vni);
-					printf("[%d, %d, %d]\n", vi, vti, vni);
-
-					indices[numIndices-3] = vi;
-					indices[numIndices-2] = vti;
-					indices[numIndices-1] = vni;
-				}
-
-				// TODO: will have to handle the case when normals are left out
-				// or when texture indices are left out
-			}
-		}
-
-		printf("\n");
-	}
-	*/
-
-	/*
-	for(i=0; i<numl; i++) {
-		free(lines[i]);
-	}
-
-	free(lines);
-
-	// NOTE: close the file
-	fclose(obj_file);
-	obj_file = NULL;
-	*/
+	loadObjFile(&verts, &inds, argv[1]);
 
 	/* END TEST OBJ FILE PARSING */
 	// ========================================================================
@@ -532,6 +444,7 @@ int SDL_main(int argc, char *argv[]) {
 	GLfloat glVerts[5*verts->num];
 	memset(glVerts, 0x00, 5*verts->num*sizeof(GLfloat));
 
+	// NOTE: vertices for a triangle (clockwise)
 	int tempInd = 0;
 	for(; tempInd<verts->num; tempInd++) {
 		glVerts[5*tempInd+0] = verts->pos[3*tempInd+0];
@@ -541,59 +454,6 @@ int SDL_main(int argc, char *argv[]) {
 		glVerts[5*tempInd+3] = verts->tex[2*tempInd+0];
 		glVerts[5*tempInd+4] = verts->tex[2*tempInd+1];
 	}
-
-	// NOTE: vertices for a triangle (clockwise)
-	/*
-	float vertices[] = {
-		-0.5f,  0.5f, 0.0f, 0.0f, 0.0f,
-		 0.5f,  0.5f, 0.0f, 1.0f, 0.0f,
-		 0.5f, -0.5f, 0.0f, 1.0f, 1.0f,
-		-0.5f, -0.5f, 0.0f, 0.0f, 1.0f
-	};
-	float vertices[] = {
-		-0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-		 0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-		-0.5f,  0.5f, -0.5f, 0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-
-		-0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f, 1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f, 1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f, 1.0f, 1.0f,
-		-0.5f,  0.5f,  0.5f, 0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-
-		-0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		-0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-
-		 0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-		 0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-
-		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-		 0.5f, -0.5f, -0.5f, 1.0f, 1.0f,
-		 0.5f, -0.5f,  0.5f, 1.0f, 0.0f,
-		 0.5f, -0.5f,  0.5f, 1.0f, 0.0f,
-		-0.5f, -0.5f,  0.5f, 0.0f, 0.0f,
-		-0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-
-		-0.5f,  0.5f, -0.5f, 0.0f, 1.0f,
-		 0.5f,  0.5f, -0.5f, 1.0f, 1.0f,
-		 0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-		 0.5f,  0.5f,  0.5f, 1.0f, 0.0f,
-		-0.5f,  0.5f,  0.5f, 0.0f, 0.0f,
-		-0.5f,  0.5f, -0.5f, 0.0f, 1.0f
-	};
-	*/
 
 	// NOTE: allocate an array buffer on the GPU
 	GLuint verBuffer;
@@ -638,35 +498,7 @@ int SDL_main(int argc, char *argv[]) {
 	// ========================================================================
 
 	// NOTE: index into the raw vertex array
-
-	/*
-	GLuint glElems[6*inds->num];
-	memset(glElems, 0x00, 6*inds->num*sizeof(GLuint));
-	*/
-
-	/*
-	tempIndex = 0;
-	for(; tempIndex<numFaces; tempIndex++) {
-		int ind0 = indices[4*3*tempIndex+0];
-		int ind1 = indices[4*3*tempIndex+3];
-		int ind2 = indices[4*3*tempIndex+6];
-		int ind3 = indices[4*3*tempIndex+9];
-
-		elements[6*tempIndex+0] = ind0-1;
-		elements[6*tempIndex+1] = ind1-1;
-		elements[6*tempIndex+2] = ind2-1;
-		elements[6*tempIndex+3] = ind2-1;
-		elements[6*tempIndex+4] = ind3-1;
-		elements[6*tempIndex+5] = ind0-1;
-	}
-	*/
-
-	/*
-	GLuint elements[] = {
-		0, 1, 2,
-		2, 3, 0
-	};
-	*/
+	// inds->pos
 
 	// NOTE: allocate a GPU buffer for the element data
 	GLuint eleBuffer;
@@ -739,7 +571,7 @@ int SDL_main(int argc, char *argv[]) {
 
 	glm::mat4 model;
 	float angle = (float) M_PI / 500.0f;
-	//model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+	model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
 
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -890,12 +722,7 @@ int SDL_main(int argc, char *argv[]) {
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
 		// NOTE: draw to the screen
-		//glDrawArrays(GL_TRIANGLES, 0, (4*numFaces));
-		//glDrawArrays(GL_TRIANGLES, 0, 36);
-
 		glDrawElements(GL_TRIANGLES, inds->num, GL_UNSIGNED_INT, 0);
-		//glDrawElements(GL_TRIANGLES, 6*numFaces, GL_UNSIGNED_INT, 0);
-		//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		/* END TESTING */
 		// ====================================================================
