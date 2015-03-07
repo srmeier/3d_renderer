@@ -514,14 +514,22 @@ int SDL_main(int argc, char *argv[]) {
 
 		// NOTE: find the vertex index in the vert index array
 		int i;
+		GLuint temp = 0;
 		for(i=0; i<inds->num; i++) {
+			SDL_bool first = SDL_TRUE;
 			if(inds->pos[i] == tempInd) {
 				// NOTE: once the index into the vert index array is found
 				// pull the corresponding texture info
 
 				glVerts[5*tempInd+3] = verts->tex[2*inds->tex[i]+0];
 				glVerts[5*tempInd+4] = verts->tex[2*inds->tex[i]+1];
-				break;
+				//break;
+				if(first) {
+					temp = inds->tex[i];
+					first = SDL_FALSE;
+				} else {
+					if(temp != inds->tex[i]) printf("NOOOOOOOOOO");
+				}
 			}
 		}
 	}
@@ -542,7 +550,7 @@ int SDL_main(int argc, char *argv[]) {
 
 	// NOTE: specify the stride (spacing) and offset for array buffer which
 	// will be used in place of the attribute variable in the shader program
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), 0);
 	/*
 	- this function call automatically directs the array buffer bound to
 		GL_ARRAY_BUFFER towards the attribute in the shader program
@@ -557,7 +565,7 @@ int SDL_main(int argc, char *argv[]) {
 
 	// NOTE: specify the stride (spacing) and offset for array buffer which
 	// will be used in place of the attribute variable in the shader program
-	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void *)(3*sizeof(float)));
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), (void *)(3*sizeof(GLfloat)));
 
 	// NOTE: enable the attribute
 	glEnableVertexAttribArray(texAttrib);
