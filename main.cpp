@@ -178,7 +178,44 @@ void loadObjFile(VertInfo** verts, IndInfo** inds, const char* filename) {
 				}
 			}
 
-			if(num==4*3) {
+			if(num==3*3) {
+				// NOTE: triangle
+
+				// TODO: currently only setting the position index but I need
+				// to set them all eventually
+
+				(*inds)->num += 3;
+
+				(*inds)->pos = (GLuint*) realloc((*inds)->pos, (*inds)->num*sizeof(GLuint));
+				(*inds)->tex = (GLuint*) realloc((*inds)->tex, (*inds)->num*sizeof(GLuint));
+				(*inds)->norm = (GLuint*) realloc((*inds)->norm, (*inds)->num*sizeof(GLuint));
+
+				int pos0 = indices[0];
+				int pos1 = indices[3];
+				int pos2 = indices[6];
+
+				(*inds)->pos[(*inds)->num-3] = pos0-1;
+				(*inds)->pos[(*inds)->num-2] = pos1-1;
+				(*inds)->pos[(*inds)->num-1] = pos2-1;
+
+				int tex0 = indices[1];
+				int tex1 = indices[4];
+				int tex2 = indices[7];
+
+				(*inds)->tex[(*inds)->num-3] = tex0-1;
+				(*inds)->tex[(*inds)->num-2] = tex1-1;
+				(*inds)->tex[(*inds)->num-1] = tex2-1;
+
+				int norm0 = indices[2];
+				int norm1 = indices[5];
+				int norm2 = indices[8];
+
+				(*inds)->norm[(*inds)->num-3] = norm0-1;
+				(*inds)->norm[(*inds)->num-2] = norm1-1;
+				(*inds)->norm[(*inds)->num-1] = norm2-1;
+
+			} else if(num==4*3) {
+				// NOTE: quadrilateral
 
 				// TODO: currently only setting the position index but I need
 				// to set them all eventually
@@ -200,6 +237,30 @@ void loadObjFile(VertInfo** verts, IndInfo** inds, const char* filename) {
 				(*inds)->pos[(*inds)->num-3] = pos2-1;
 				(*inds)->pos[(*inds)->num-2] = pos3-1;
 				(*inds)->pos[(*inds)->num-1] = pos0-1;
+
+				int tex0 = indices[1];
+				int tex1 = indices[4];
+				int tex2 = indices[7];
+				int tex3 = indices[10];
+
+				(*inds)->tex[(*inds)->num-6] = tex0-1;
+				(*inds)->tex[(*inds)->num-5] = tex1-1;
+				(*inds)->tex[(*inds)->num-4] = tex2-1;
+				(*inds)->tex[(*inds)->num-3] = tex2-1;
+				(*inds)->tex[(*inds)->num-2] = tex3-1;
+				(*inds)->tex[(*inds)->num-1] = tex0-1;
+
+				int norm0 = indices[2];
+				int norm1 = indices[5];
+				int norm2 = indices[8];
+				int norm3 = indices[11];
+
+				(*inds)->norm[(*inds)->num-6] = norm0-1;
+				(*inds)->norm[(*inds)->num-5] = norm1-1;
+				(*inds)->norm[(*inds)->num-4] = norm2-1;
+				(*inds)->norm[(*inds)->num-3] = norm2-1;
+				(*inds)->norm[(*inds)->num-2] = norm3-1;
+				(*inds)->norm[(*inds)->num-1] = norm0-1;
 			}
 
 			free(indices);
@@ -451,8 +512,18 @@ int SDL_main(int argc, char *argv[]) {
 		glVerts[5*tempInd+1] = verts->pos[3*tempInd+1];
 		glVerts[5*tempInd+2] = verts->pos[3*tempInd+2];
 
-		glVerts[5*tempInd+3] = verts->tex[2*tempInd+0];
-		glVerts[5*tempInd+4] = verts->tex[2*tempInd+1];
+		// NOTE: find the vertex index in the vert index array
+		int i;
+		for(i=0; i<inds->num; i++) {
+			if(inds->pos[i] == tempInd) {
+				// NOTE: once the index into the vert index array is found
+				// pull the corresponding texture info
+
+				glVerts[5*tempInd+3] = verts->tex[2*inds->tex[i]+0];
+				glVerts[5*tempInd+4] = verts->tex[2*inds->tex[i]+1];
+				break;
+			}
+		}
 	}
 
 	// NOTE: allocate an array buffer on the GPU
