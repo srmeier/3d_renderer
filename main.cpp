@@ -20,265 +20,140 @@ running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 #include "SDL2/SDL.h"
 #include "SDL2/SDL_opengl.h"
 
-//-----------------------------------------------------------------------------
-typedef struct {
-	GLfloat* pos;   // (x,y,z)
-	GLfloat* tex;   // (u,v)
-	GLfloat* norm;  // (x,y,z)
-	GLsizeiptr num; // total num of verts
-} VertInfo;
-
-typedef struct {
-	GLuint* pos;    // 3 pos inds per
-	GLuint* tex;    // 3 tex inds per
-	GLuint* norm;   // 3 norm inds per
-	GLsizeiptr num; // num of triangles
-} IndInfo;
+#include "auxiliary.h"
 
 //-----------------------------------------------------------------------------
-void loadObjFile(VertInfo** verts, IndInfo** inds, const char* filename) {
-	if(*verts) {
-		free((*verts)->pos);
-		(*verts)->pos = NULL;
-		free((*verts)->tex);
-		(*verts)->tex = NULL;
-		free((*verts)->norm);
-		(*verts)->norm = NULL;
+GLuint shaderProgram;
 
-		(*verts)->num = 0;
-	} else *verts = (VertInfo*) calloc(0x01, sizeof(VertInfo));
+//-----------------------------------------------------------------------------
+class Mesh {
+private:
+	IndInfo* inds;
+	VertInfo* verts;
+	SDL_Surface* sdl_surf;
 
-	if(*inds) {
-		free((*inds)->pos);
-		(*inds)->pos = NULL;
-		free((*inds)->tex);
-		(*inds)->tex = NULL;
-		free((*inds)->norm);
-		(*inds)->norm = NULL;
-		
-		(*inds)->num = 0;
-	} else *inds = (IndInfo*) calloc(0x01, sizeof(IndInfo));
+	bool glLoaded;
+	GLuint vertArray;
+	GLuint vertBuffer;
+	GLuint textureInd;
 
-	size_t n = 0;
-	char** lines = NULL;
+protected:
+	// transforms
 
-	if(filename==NULL) return;
-	FILE* fp = fopen(filename, "r");
+public:
+	Mesh(const char* obj_fn, const char* tex_fn);
+	~Mesh(void);
 
-	do {
-		char c;
-		int colInd = 0;
+	void render(void);
 
-		lines = (char**) realloc(lines, ++n*sizeof(char*));
-		lines[n-1] = NULL;
+	void glBind(void);
+	void glLoad(void);
+	void glUnload(void);
+};
 
-		do {
-			fread(&c, sizeof(char), 1, fp);
+//-----------------------------------------------------------------------------
+Mesh::Mesh(const char* obj_fn, const char* tex_fn) {
+	inds = NULL;
+	verts = NULL;
+	sdl_surf = NULL;
 
-			// NOTE: strip newlines
-			if(c!='\n') {
-				if(colInd>0) {
-					// NOTE: strip extra spaces
-					if(!(lines[n-1][colInd-1]==' ' && c==' ')) {
-						lines[n-1] = (char*) realloc(lines[n-1], ++colInd*sizeof(char));
-						lines[n-1][colInd-1] = c;
-					}
-				} else {
-					lines[n-1] = (char*) realloc(lines[n-1], ++colInd*sizeof(char));
-					lines[n-1][colInd-1] = c;
-				}
-			}
-		} while(c!='\n');
+	loadObjFile(&verts, &inds, obj_fn);
 
-		// NOTE: end with a null terminator
-		lines[n-1] = (char*) realloc(lines[n-1], ++colInd*sizeof(char));
-		lines[n-1][colInd-1] = '\0';
+	SDL_Surface* temp_surf = SDL_LoadBMP(tex_fn);
 
-		if(lines[n-1][0]=='#') {
-			// NOTE: ignore comments
+	SDL_PixelFormat nFormat = *temp_surf->format;
 
-			free(lines[n-1]);
-			lines[n-1] = NULL;
+	nFormat.Rmask = 0x000000FF;
+	nFormat.Gmask = 0x0000FF00;
+	nFormat.Bmask = 0x00FF0000;
+	nFormat.Amask = 0xFF000000;
 
-			lines = (char**) realloc(lines, --n*sizeof(char*));
-		} else if(lines[n-1][0]=='\0') {
-			// NOTE: ignore blank lines
+	sdl_surf = SDL_ConvertSurface(temp_surf, &nFormat, 0);
 
-			free(lines[n-1]);
-			lines[n-1] = NULL;
+	SDL_FreeSurface(temp_surf);
+	temp_surf = NULL;
 
-			lines = (char**) realloc(lines, --n*sizeof(char*));
-		}
-	} while(!feof(fp));
+	glLoaded = false;
+}
 
-	fclose(fp);
-	fp = NULL;
+Mesh::~Mesh(void) {
+	loadObjFile(&verts, &inds, NULL);
 
-	size_t numPos = 0;
-	size_t numTex = 0;
+	SDL_FreeSurface(sdl_surf);
 
-	int i;
-	for(i=0; i<n; i++) {
-		// NOTE: parse the file
+	inds = NULL;
+	verts = NULL;
+	sdl_surf = NULL;
+}
 
-		printf("%s\n", lines[i]);
+void Mesh::render(void) {
+	if(!glLoaded) return;
 
-		if(lines[i][0]=='v' && lines[i][1]==' ') {
-			// NOTE: parse the vertex and add it to the array
+	//glBind();
+	glDrawArrays(GL_TRIANGLES, 0, inds->num);
+}
 
-			(*verts)->num++;
+void Mesh::glBind(void) {
+	if(!glLoaded) return;
 
-			numPos += 3;
-			(*verts)->pos = (GLfloat*) realloc((*verts)->pos, numPos*sizeof(GLfloat));
+	glBindVertexArray(vertArray);
+	glBindTexture(GL_TEXTURE_2D, textureInd);
+}
 
-			GLfloat x = 0, y = 0, z = 0;
-			sscanf(lines[i], "v %f %f %f", &x, &y, &z);
-			printf("[%f, %f, %f]\n", x, y, z);
+void Mesh::glLoad(void) {
+	// NOTE: generate OpenGL variables
+	glGenBuffers(1, &vertBuffer);
+	glGenTextures(1, &textureInd);
+	glGenVertexArrays(1, &vertArray);
 
-			(*verts)->pos[numPos-3] = x;
-			(*verts)->pos[numPos-2] = y;
-			(*verts)->pos[numPos-1] = z;
+	// NOTE: activate a free texture
+	glActiveTexture(getFreeTex());
 
-		} else if(lines[i][0]=='v' && lines[i][1]=='t' && lines[i][2]==' ') {
-			// NOTE: parse the texture coordinates
+	// NOTE: bind to the OpenGL variables
+	glBindVertexArray(vertArray);
+	glBindTexture(GL_TEXTURE_2D, textureInd);
+	glBindBuffer(GL_ARRAY_BUFFER, vertBuffer);
 
-			numTex += 2;
-			(*verts)->tex = (GLfloat*) realloc((*verts)->tex, numTex*sizeof(GLfloat));
+	// NOTE: generate the OpenGL vert information
+	GLfloat glVerts[5*inds->num];
+	memset(glVerts, 0x00, 5*inds->num*sizeof(GLfloat));
 
-			GLfloat u = 0, v = 0;
-			sscanf(lines[i], "vt %f %f", &u, &v);
-			printf("[%f, %f]\n", u, v);
-
-			(*verts)->tex[numTex-2] = u;
-			(*verts)->tex[numTex-1] = v;
-			
-		} else if(lines[i][0] == 'f' && lines[i][1] == ' ') {
-			// NOTE: parse the face elements
-
-			int c, num = 0;
-			GLuint* indices = NULL;
-
-			for(c=1; c<strlen(lines[i]); c++) {
-
-				// TODO: will have to handle the case when normals are left out
-				// or when texture indices are left out
-
-				// TODO: currently I am assuming 4 indices per face which makes
-				// two triangles (i.e. 6 elements)
-
-				if(lines[i][c]==' ') {
-					num += 3;
-					indices = (GLuint*) realloc(indices, num*sizeof(GLuint));
-
-					GLuint vi = 0, vti = 0, vni = 0;
-					sscanf(&lines[i][c], " %d/%d/%d", &vi, &vti, &vni);
-					printf("[%d, %d, %d]\n", vi, vti, vni);
-
-					indices[num-3] = vi;
-					indices[num-2] = vti;
-					indices[num-1] = vni;
-				}
-			}
-
-			if(num==3*3) {
-				// NOTE: triangle
-
-				// TODO: currently only setting the position index but I need
-				// to set them all eventually
-
-				(*inds)->num += 3;
-
-				(*inds)->pos = (GLuint*) realloc((*inds)->pos, (*inds)->num*sizeof(GLuint));
-				(*inds)->tex = (GLuint*) realloc((*inds)->tex, (*inds)->num*sizeof(GLuint));
-				(*inds)->norm = (GLuint*) realloc((*inds)->norm, (*inds)->num*sizeof(GLuint));
-
-				int pos0 = indices[0];
-				int pos1 = indices[3];
-				int pos2 = indices[6];
-
-				(*inds)->pos[(*inds)->num-3] = pos0-1;
-				(*inds)->pos[(*inds)->num-2] = pos1-1;
-				(*inds)->pos[(*inds)->num-1] = pos2-1;
-
-				int tex0 = indices[1];
-				int tex1 = indices[4];
-				int tex2 = indices[7];
-
-				(*inds)->tex[(*inds)->num-3] = tex0-1;
-				(*inds)->tex[(*inds)->num-2] = tex1-1;
-				(*inds)->tex[(*inds)->num-1] = tex2-1;
-
-				int norm0 = indices[2];
-				int norm1 = indices[5];
-				int norm2 = indices[8];
-
-				(*inds)->norm[(*inds)->num-3] = norm0-1;
-				(*inds)->norm[(*inds)->num-2] = norm1-1;
-				(*inds)->norm[(*inds)->num-1] = norm2-1;
-
-			} else if(num==4*3) {
-				// NOTE: quadrilateral
-
-				// TODO: currently only setting the position index but I need
-				// to set them all eventually
-
-				(*inds)->num += 6;
-
-				(*inds)->pos = (GLuint*) realloc((*inds)->pos, (*inds)->num*sizeof(GLuint));
-				(*inds)->tex = (GLuint*) realloc((*inds)->tex, (*inds)->num*sizeof(GLuint));
-				(*inds)->norm = (GLuint*) realloc((*inds)->norm, (*inds)->num*sizeof(GLuint));
-
-				int pos0 = indices[0];
-				int pos1 = indices[3];
-				int pos2 = indices[6];
-				int pos3 = indices[9];
-
-				(*inds)->pos[(*inds)->num-6] = pos0-1;
-				(*inds)->pos[(*inds)->num-5] = pos1-1;
-				(*inds)->pos[(*inds)->num-4] = pos2-1;
-				(*inds)->pos[(*inds)->num-3] = pos2-1;
-				(*inds)->pos[(*inds)->num-2] = pos3-1;
-				(*inds)->pos[(*inds)->num-1] = pos0-1;
-
-				int tex0 = indices[1];
-				int tex1 = indices[4];
-				int tex2 = indices[7];
-				int tex3 = indices[10];
-
-				(*inds)->tex[(*inds)->num-6] = tex0-1;
-				(*inds)->tex[(*inds)->num-5] = tex1-1;
-				(*inds)->tex[(*inds)->num-4] = tex2-1;
-				(*inds)->tex[(*inds)->num-3] = tex2-1;
-				(*inds)->tex[(*inds)->num-2] = tex3-1;
-				(*inds)->tex[(*inds)->num-1] = tex0-1;
-
-				int norm0 = indices[2];
-				int norm1 = indices[5];
-				int norm2 = indices[8];
-				int norm3 = indices[11];
-
-				(*inds)->norm[(*inds)->num-6] = norm0-1;
-				(*inds)->norm[(*inds)->num-5] = norm1-1;
-				(*inds)->norm[(*inds)->num-4] = norm2-1;
-				(*inds)->norm[(*inds)->num-3] = norm2-1;
-				(*inds)->norm[(*inds)->num-2] = norm3-1;
-				(*inds)->norm[(*inds)->num-1] = norm0-1;
-			}
-
-			free(indices);
-			indices = NULL;
-		}
-
-		printf("\n");
+	for(int i=0; i<inds->num; i++) {
+		glVerts[5*i+0] = verts->pos[3*inds->pos[i]+0];
+		glVerts[5*i+1] = verts->pos[3*inds->pos[i]+1];
+		glVerts[5*i+2] = verts->pos[3*inds->pos[i]+2];
+		glVerts[5*i+3] = verts->tex[2*inds->tex[i]+0];
+		glVerts[5*i+4] = verts->tex[2*inds->tex[i]+1];
 	}
 
-	for(i=0; i<n; i++) {
-		free(lines[i]);
-		lines[i] = NULL;
-	}
+	// NOTE: pass the information to OpenGL
+	glBufferData(GL_ARRAY_BUFFER, 5*inds->num*sizeof(GLfloat), glVerts, GL_STATIC_DRAW);
 
-	free(lines);
-	lines = NULL;
+	// NOTE: pass the texture information to OpenGL
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, sdl_surf->w, sdl_surf->h, 0, GL_RGB, GL_UNSIGNED_BYTE, sdl_surf->pixels);
+	numLoadedTextures++;
+
+	// NOTE: set the shader program variables
+	glUniform1i(glGetUniformLocation(shaderProgram, "tex"), numLoadedTextures-1);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	GLint posAttrib = glGetAttribLocation(shaderProgram, "pos");
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), 0);
+	glEnableVertexAttribArray(posAttrib);
+
+	GLint texAttrib = glGetAttribLocation(shaderProgram, "texcoord");
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), (void *)(3*sizeof(GLfloat)));
+	glEnableVertexAttribArray(texAttrib);
+
+	glLoaded = true;
+}
+
+void Mesh::glUnload(void) {
+	glDeleteBuffers(1, &vertBuffer);
+	glDeleteTextures(1, &textureInd);
+	glDeleteVertexArrays(1, &vertArray);
+
+	glLoaded = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -443,7 +318,7 @@ int SDL_main(int argc, char *argv[]) {
 	}
 
 	// NOTE: create a shader program out of the vertex and fragment shaders
-	GLuint shaderProgram = glCreateProgram();
+	shaderProgram = glCreateProgram();
 
 	// NOTE: attach the vertex and fragment shaders
 	glAttachShader(shaderProgram, vertShader);
@@ -467,213 +342,6 @@ int SDL_main(int argc, char *argv[]) {
 	glUseProgram(shaderProgram);
 
 	/* END SET SHADER PROGRAM */
-	// ========================================================================
-
-	/* BEGIN TEST OBJ FILE PARSING */
-	// ========================================================================
-
-	// NOTE: check for the correct number of arguements
-	if(argc<2) {
-		// NOTE: need a .obj file to test
-		fprintf(stderr, "\nNeed an object file for testing.\n\n");
-		return 0;
-	}
-
-	IndInfo* inds = NULL;
-	VertInfo* verts = NULL;
-
-	loadObjFile(&verts, &inds, argv[1]);
-
-	IndInfo* sinds = NULL;
-	VertInfo* sverts = NULL;
-	loadObjFile(&sverts, &sinds, "sword.obj");
-
-	/* END TEST OBJ FILE PARSING */
-	// ========================================================================
-
-	/* SET VERTEX INFORMATION */
-	// ========================================================================
-
-	// NOTE: create a vertex array object to store all the relationships
-	// between vertex buffer objects and shader program attributes
-	GLuint verArray;
-	glGenVertexArrays(1, &verArray);
-
-	// NOTE: bind to this vertex array when establishing all the connections
-	// for the shaderProgram
-	glBindVertexArray(verArray);
-	/*
-	- if I every need to switch raw vertex data to program attributes all I
-		need to do is bind a different vertex array object
-	*/
-
-	GLfloat glVerts[5*inds->num];
-	memset(glVerts, 0x00, 5*inds->num*sizeof(GLfloat));
-
-	int i;
-	for(i=0; i<inds->num; i++) {
-		glVerts[5*i+0] = verts->pos[3*inds->pos[i]+0];
-		glVerts[5*i+1] = verts->pos[3*inds->pos[i]+1];
-		glVerts[5*i+2] = verts->pos[3*inds->pos[i]+2];
-		glVerts[5*i+3] = verts->tex[2*inds->tex[i]+0];
-		glVerts[5*i+4] = verts->tex[2*inds->tex[i]+1];
-	}
-
-	// NOTE: allocate an array buffer on the GPU
-	GLuint verBuffer;
-	glGenBuffers(1, &verBuffer);
-
-	// NOTE: bind to the array buffer so that we may send our data to the GPU
-	glBindBuffer(GL_ARRAY_BUFFER, verBuffer);
-
-	// NOTE: send our vertex data to the GPU and set as STAIC
-	glBufferData(GL_ARRAY_BUFFER, 5*inds->num*sizeof(GLfloat), glVerts, GL_STATIC_DRAW);
-
-	// NOTE: get a pointer to the position attribute variable in the shader
-	// program
-	GLint posAttrib = glGetAttribLocation(shaderProgram, "pos");
-
-	// NOTE: specify the stride (spacing) and offset for array buffer which
-	// will be used in place of the attribute variable in the shader program
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), 0);
-	/*
-	- this function call automatically directs the array buffer bound to
-		GL_ARRAY_BUFFER towards the attribute in the shader program
-	*/
-
-	// NOTE: enable the attribute
-	glEnableVertexAttribArray(posAttrib);
-
-	// NOTE: get a pointer to the position attribute variable in the shader
-	// program
-	GLint texAttrib = glGetAttribLocation(shaderProgram, "texcoord");
-
-	// NOTE: specify the stride (spacing) and offset for array buffer which
-	// will be used in place of the attribute variable in the shader program
-	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), (void *)(3*sizeof(GLfloat)));
-
-	// NOTE: enable the attribute
-	glEnableVertexAttribArray(texAttrib);
-
-	// ========================================================================
-	// NOTE: sword
-	GLuint sverArray;
-	glGenVertexArrays(1, &sverArray);
-	glBindVertexArray(sverArray);
-
-	GLfloat sglVerts[5*sinds->num];
-	memset(sglVerts, 0x00, 5*sinds->num*sizeof(GLfloat));
-
-	for(i=0; i<sinds->num; i++) {
-		sglVerts[5*i+0] = sverts->pos[3*sinds->pos[i]+0];
-		sglVerts[5*i+1] = sverts->pos[3*sinds->pos[i]+1];
-		sglVerts[5*i+2] = sverts->pos[3*sinds->pos[i]+2];
-		sglVerts[5*i+3] = sverts->tex[2*sinds->tex[i]+0];
-		sglVerts[5*i+4] = sverts->tex[2*sinds->tex[i]+1];
-	}
-
-	GLuint sverBuffer;
-	glGenBuffers(1, &sverBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, sverBuffer);
-	glBufferData(GL_ARRAY_BUFFER, 5*sinds->num*sizeof(GLfloat), sglVerts, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), 0);
-	glEnableVertexAttribArray(posAttrib);
-
-	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), (void *)(3*sizeof(GLfloat)));
-	glEnableVertexAttribArray(texAttrib);
-
-	/* END SET VERTEX INFORMATION */
-	// ========================================================================
-
-	/* SET TEXTURE INFORMATION */
-	// ========================================================================
-	glBindVertexArray(verArray);
-
-	// NOTE: allocate a GPU texture
-	GLuint tex;
-	glGenTextures(1, &tex);
-
-	// NOTE: set the texture to unit 0
-	glActiveTexture(GL_TEXTURE0);
-
-	// NOTE: bind to the texture so that we may send our data to the GPU
-	glBindTexture(GL_TEXTURE_2D, tex);
-
-	// NOTE: load the bitmap SDL surface for texture pixels
-	SDL_Surface *surface = SDL_LoadBMP("tex03.bmp");
-
-	if(surface == NULL) {
-		fprintf(stderr, "SDL_LoadBMP: %s\n", SDL_GetError());
-		return -1;
-	}
-
-	// NOTE: convert SDL2 surface by swapping RGBA locations
-	SDL_PixelFormat newFormat = *surface->format;
-
-	newFormat.Rmask = 0x000000FF;
-	newFormat.Gmask = 0x0000FF00;
-	newFormat.Bmask = 0x00FF0000;
-	newFormat.Amask = 0xFF000000;
-
-	// NOTE: get the converted surface
-	SDL_Surface *nSurface = SDL_ConvertSurface(surface, &newFormat, 0);
-
-	// NOTE: send the pixels to the GPU
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, nSurface->pixels);
-
-	// NOTE: bind the uniform "tex" in the fragment shader to the unit 0
-	// texture
-	glUniform1i(glGetUniformLocation(shaderProgram, "tex"), 0);
-
-	// NOTE: generate the mipmaps for scaling
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	// NOTE: free the converted surface
-	SDL_FreeSurface(nSurface);
-	nSurface = NULL;
-
-	// NOTE: free the original surface	
-	SDL_FreeSurface(surface);
-	surface = NULL;
-
-	// ========================================================================
-	// NOTE: sword
-	glBindVertexArray(sverArray);
-
-	GLuint stex;
-	glGenTextures(1, &stex);
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, stex);
-
-	surface = SDL_LoadBMP("tex00.bmp");
-	if(surface == NULL) {
-		fprintf(stderr, "SDL_LoadBMP: %s\n", SDL_GetError());
-		return -1;
-	}
-
-	newFormat = *surface->format;
-
-	newFormat.Rmask = 0x000000FF;
-	newFormat.Gmask = 0x0000FF00;
-	newFormat.Bmask = 0x00FF0000;
-	newFormat.Amask = 0xFF000000;
-
-	nSurface = SDL_ConvertSurface(surface, &newFormat, 0);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, nSurface->pixels);
-	glUniform1i(glGetUniformLocation(shaderProgram, "tex"), 1);
-
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	SDL_FreeSurface(nSurface);
-	nSurface = NULL;
-
-	SDL_FreeSurface(surface);
-	surface = NULL;
-
-	/* END SET TEXTURE INFORMATION */
 	// ========================================================================
 
 	/* TESTING */
@@ -709,6 +377,15 @@ int SDL_main(int argc, char *argv[]) {
 
 	GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
 	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+
+	Mesh* roomMesh = new Mesh("test.obj", "tex02.bmp");
+	roomMesh->glLoad();
+
+	Mesh* testMesh = new Mesh("wall.obj", "tex02.bmp");
+	testMesh->glLoad();
+
+	Mesh* swordMesh = new Mesh("sword.obj", "tex00.bmp");
+	swordMesh->glLoad();
 
 	/* END TESTING */
 	// ========================================================================
@@ -813,12 +490,6 @@ int SDL_main(int argc, char *argv[]) {
 		uint8_t start_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_START);
 		if(start_bnt) running = SDL_FALSE;
 
-		//uint8_t b_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_B);
-		//if(b_bnt) running = SDL_FALSE;
-
-		//uint8_t a_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_A);
-		//if(a_bnt) printf("switch vertex buffers\n");
-
 		uint8_t y_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_Y);
 		if(y_bnt && !swinging) {
 			swing_frame = 0;
@@ -851,13 +522,6 @@ int SDL_main(int argc, char *argv[]) {
 		int x_axisr = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_RIGHTX);
 		int y_axisr = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_RIGHTY);
 
-		// NOTE: clear the screen buffer
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-		/* TESTING */
-		// ====================================================================
-		
 		// NOTE: easy movement with the left stick
 		if(abs(x_axisl)>10000) {
 			m_direction = glm::rotate(m_direction, (float) -x_axisl/1000000.0f, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -879,29 +543,26 @@ int SDL_main(int argc, char *argv[]) {
 			}
 		}
 
-		/*
-		if(abs(y_axisr)>10000) {
-			if(y_axisr>0) m_direction = glm::rotate(m_direction, (float) -y_axisr/1000000.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-			if(y_axisr<0) m_direction = glm::rotate(m_direction, (float) y_axisr/1000000.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-		}
-		*/
+		// NOTE: clear the screen buffer
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-		// NOTE: apply the input modifications
+		/* TESTING */
+		// ====================================================================
+
+		roomMesh->glBind();
+
 		view = glm::lookAt(m_position, m_position+m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
-
-		// NOTE: draw to the screen
-		glBindVertexArray(verArray);
 		
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
-		glBindTexture(GL_TEXTURE_2D, tex);
-		glDrawArrays(GL_TRIANGLES, 0, inds->num);
+		roomMesh->render();
 
 		// NOTE: draw sword
-		glBindVertexArray(sverArray);
+		swordMesh->glBind();
 
 		// NOTE: sword transform
 		if((swinging&&swing_forward) && swing_frame<60) {
@@ -930,8 +591,17 @@ int SDL_main(int argc, char *argv[]) {
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
-		glBindTexture(GL_TEXTURE_2D, stex);
-		glDrawArrays(GL_TRIANGLES, 0, sinds->num);
+		swordMesh->render();
+
+		// testing
+		testMesh->glBind();
+
+		glm::mat4 testmodel;
+		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(testmodel));
+		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+
+		testMesh->render();
 
 		/* END TESTING */
 		// ====================================================================
@@ -943,14 +613,9 @@ int SDL_main(int argc, char *argv[]) {
 	/* TESTING */
 	// ========================================================================
 
-	// NOTE: free the GPU texture
-	glDeleteTextures(1, &tex);
-
-	// NOTE: free the arrays buffer on the GPU
-	glDeleteBuffers(1, &verBuffer);
-
-	// NOTE: free the vertex array attribute relation on the GPU
-	glDeleteVertexArrays(1, &verArray);
+	roomMesh->glUnload();
+	testMesh->glUnload();
+	swordMesh->glUnload();
 
 	// NOTE: detach the vertex and fragment shaders from the one shader program
 	glDetachShader(shaderProgram, vertShader);
