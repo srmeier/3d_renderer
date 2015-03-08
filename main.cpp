@@ -481,7 +481,7 @@ int SDL_main(int argc, char *argv[]) {
 	VertInfo* verts = NULL;
 
 	loadObjFile(&verts, &inds, argv[1]);
-	loadObjFile(&verts, &inds, argv[1]);
+	//loadObjFile(&verts, &inds, argv[1]);
 
 	/* END TEST OBJ FILE PARSING */
 	// ========================================================================
@@ -502,6 +502,20 @@ int SDL_main(int argc, char *argv[]) {
 		need to do is bind a different vertex array object
 	*/
 
+	GLfloat glVerts[5*inds->num];
+	memset(glVerts, 0x00, 5*inds->num*sizeof(GLfloat));
+
+	int i;
+	for(i=0; i<inds->num; i++) {
+		glVerts[5*i+0] = verts->pos[3*inds->pos[i]+0];
+		glVerts[5*i+1] = verts->pos[3*inds->pos[i]+1];
+		glVerts[5*i+2] = verts->pos[3*inds->pos[i]+2];
+
+		glVerts[5*i+3] = verts->tex[2*inds->tex[i]+0];
+		glVerts[5*i+4] = verts->tex[2*inds->tex[i]+1];
+	}
+
+	/*
 	GLfloat glVerts[5*verts->num];
 	memset(glVerts, 0x00, 5*verts->num*sizeof(GLfloat));
 
@@ -515,8 +529,8 @@ int SDL_main(int argc, char *argv[]) {
 		// NOTE: find the vertex index in the vert index array
 		int i;
 		GLuint temp = 0;
+		SDL_bool first = SDL_TRUE;
 		for(i=0; i<inds->num; i++) {
-			SDL_bool first = SDL_TRUE;
 			if(inds->pos[i] == tempInd) {
 				// NOTE: once the index into the vert index array is found
 				// pull the corresponding texture info
@@ -528,11 +542,12 @@ int SDL_main(int argc, char *argv[]) {
 					temp = inds->tex[i];
 					first = SDL_FALSE;
 				} else {
-					if(temp != inds->tex[i]) printf("NOOOOOOOOOO");
+					if(temp != inds->tex[i]) printf("NOOOOOOOOOO\n");
 				}
 			}
 		}
 	}
+	*/
 
 	// NOTE: allocate an array buffer on the GPU
 	GLuint verBuffer;
@@ -542,7 +557,8 @@ int SDL_main(int argc, char *argv[]) {
 	glBindBuffer(GL_ARRAY_BUFFER, verBuffer);
 
 	// NOTE: send our vertex data to the GPU and set as STAIC
-	glBufferData(GL_ARRAY_BUFFER, 5*verts->num*sizeof(GLfloat), glVerts, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 5*inds->num*sizeof(GLfloat), glVerts, GL_STATIC_DRAW);
+	//glBufferData(GL_ARRAY_BUFFER, 5*verts->num*sizeof(GLfloat), glVerts, GL_STATIC_DRAW);
 
 	// NOTE: get a pointer to the position attribute variable in the shader
 	// program
@@ -801,7 +817,8 @@ int SDL_main(int argc, char *argv[]) {
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
 		// NOTE: draw to the screen
-		glDrawElements(GL_TRIANGLES, inds->num, GL_UNSIGNED_INT, 0);
+		glDrawArrays(GL_TRIANGLES, 0, inds->num);
+		//glDrawElements(GL_TRIANGLES, inds->num, GL_UNSIGNED_INT, 0);
 
 		/* END TESTING */
 		// ====================================================================

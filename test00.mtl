@@ -1,9 +1,15 @@
 # Created with Anim8or 0.98
 # Object "object01":
 
-newmtl material01
+newmtl ___default___
 Ka 0.878 0.878 0.878
 Kd 0.878 0.878 0.878
+Ks 1 1 1
+Ns 752.6
+
+newmtl material01
+Ka 1 1 1
+Kd 1 1 1
 Ks 1 1 1
 Ns 752.6
 map_Kd tex02.bmp
