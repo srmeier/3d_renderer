@@ -12,6 +12,7 @@ running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtx/rotate_vector.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 #include "GL/glew.h"
@@ -609,24 +610,27 @@ int SDL_main(int argc, char *argv[]) {
 	/* TESTING */
 	// ========================================================================
 
+	glm::vec3 m_position(0.0f, 0.0f, 0.0f);
+	glm::vec3 m_direction(0.0f, 0.0f, 1.0f);
+
 	glm::mat4 model;
-	float angle = (float) M_PI / 500.0f;
-	model = glm::rotate(model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+	float angle = (float) M_PI/100.0f;
+	model = glm::translate(model, glm::vec3(0.0f, 30.0f, 0.0f));
 
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
-	float pDist = 4.2f;
+	float pDist = 0.0f;
 	glm::mat4 view = glm::lookAt(
 		glm::vec3(pDist, pDist, pDist),
-		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f),
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 
 	GLint uniView = glGetUniformLocation(shaderProgram, "view");
 	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-	glm::mat4 proj = glm::perspective(45.0f, 800.0f / 600.0f, 1.0f, 256.0f);
+	glm::mat4 proj = glm::perspective(45.0f, 800.0f/600.0f, 1.0f, 256.0f);
 
 	GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
 	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
@@ -708,44 +712,38 @@ int SDL_main(int argc, char *argv[]) {
 		}
 
 		if(pl_input.up) {
-			pDist -= 0.05f;
-			glm::mat4 view = glm::lookAt(
-				glm::vec3(pDist, pDist, pDist),
-				glm::vec3(0.0f, 0.0f, 0.0f),
-				glm::vec3(0.0f, 1.0f, 0.0f)
-			);
-
-			GLint uniView = glGetUniformLocation(shaderProgram, "view");
-			glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+			m_position += m_direction;
 		}
 
 		if(pl_input.down) {
-			pDist += 0.05f;
-			glm::mat4 view = glm::lookAt(
-				glm::vec3(pDist, pDist, pDist),
-				glm::vec3(0.0f, 0.0f, 0.0f),
-				glm::vec3(0.0f, 1.0f, 0.0f)
-			);
-
-			GLint uniView = glGetUniformLocation(shaderProgram, "view");
-			glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+			m_position -= m_direction;
 		}
 
 		if(pl_input.left) {
-			model = glm::rotate(model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
-			glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+			m_direction = glm::rotate(m_direction, angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 
 		if(pl_input.right) {
-			model = glm::rotate(model, -angle, glm::vec3(0.0f, 1.0f, 0.0f));
-			glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+			m_direction = glm::rotate(m_direction, -angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 
 		uint8_t b_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_B);
 		if(b_bnt) running = SDL_FALSE;
 
-		int x_axis = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTX);
-		int y_axis = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTY);
+		uint8_t a_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_A);
+		if(a_bnt) printf("switch vertex buffers\n");
+
+		uint8_t l_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+		if(l_trig) m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		uint8_t r_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+		if(r_trig) m_position += glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+
+		int x_axisl = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTX);
+		int y_axisl = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTY);
+
+		int x_axisr = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_RIGHTX);
+		int y_axisr = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_RIGHTY);
 
 		// NOTE: clear the screen buffer
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -754,12 +752,24 @@ int SDL_main(int argc, char *argv[]) {
 		/* TESTING */
 		// ====================================================================
 		// NOTE: test spinning
-		if(abs(x_axis)>10000)
-			model = glm::rotate(model, (float) x_axis/1000000.0f, glm::vec3(0.0f, 0.0f, 1.0f));
-		if(abs(y_axis)>10000)
-			model = glm::rotate(model, (float) y_axis/1000000.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+		if(abs(x_axisl)>10000) {
+			m_direction = glm::rotate(m_direction, (float) -x_axisl/1000000.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
 
-		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+		if(abs(y_axisl)>10000) {
+			if(y_axisl>0) m_position -= m_direction;
+			if(y_axisl<0) m_position += m_direction;
+		}
+
+		/*
+		if(abs(y_axisr)>10000) {
+			if(y_axisr>0) m_direction = glm::rotate(m_direction, (float) -y_axisr/1000000.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+			if(y_axisr<0) m_direction = glm::rotate(m_direction, (float) y_axisr/1000000.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+		}
+		*/
+
+		view = glm::lookAt(m_position, m_position+m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
 		// NOTE: draw to the screen
 		glDrawArrays(GL_TRIANGLES, 0, inds->num);
