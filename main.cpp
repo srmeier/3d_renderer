@@ -610,12 +610,14 @@ int SDL_main(int argc, char *argv[]) {
 	/* TESTING */
 	// ========================================================================
 
+	float cBoxW = 95.0f;
+
 	glm::vec3 m_position(0.0f, 0.0f, 0.0f);
 	glm::vec3 m_direction(0.0f, 0.0f, 1.0f);
 
 	glm::mat4 model;
 	float angle = (float) M_PI/100.0f;
-	model = glm::translate(model, glm::vec3(0.0f, 30.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(0.0f, 15.0f, 0.0f));
 
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -713,10 +715,16 @@ int SDL_main(int argc, char *argv[]) {
 
 		if(pl_input.up) {
 			m_position += m_direction;
+
+			if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
+				m_position -= m_direction;
 		}
 
 		if(pl_input.down) {
 			m_position -= m_direction;
+
+			if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
+				m_position += m_direction;
 		}
 
 		if(pl_input.left) {
@@ -734,10 +742,20 @@ int SDL_main(int argc, char *argv[]) {
 		if(a_bnt) printf("switch vertex buffers\n");
 
 		uint8_t l_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-		if(l_trig) m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+		if(l_trig) {
+			m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+
+			if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
+				m_position += glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
 
 		uint8_t r_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
-		if(r_trig) m_position += glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+		if(r_trig) {
+			m_position += glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+
+			if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
+				m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
 
 		int x_axisl = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTX);
 		int y_axisl = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTY);
@@ -757,8 +775,19 @@ int SDL_main(int argc, char *argv[]) {
 		}
 
 		if(abs(y_axisl)>10000) {
-			if(y_axisl>0) m_position -= m_direction;
-			if(y_axisl<0) m_position += m_direction;
+			if(y_axisl>0) {
+				m_position -= m_direction;
+
+				if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
+					m_position += m_direction;
+			}
+
+			if(y_axisl<0) {
+				m_position += m_direction;
+
+				if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
+					m_position -= m_direction;
+			}
 		}
 
 		/*
