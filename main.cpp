@@ -330,8 +330,8 @@ int SDL_main(int argc, char *argv[]) {
 		"Prototype",
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
-		640,
-		480,
+		2*640,
+		2*480,
 		SDL_WINDOW_OPENGL
 	);
 
@@ -588,6 +588,7 @@ int SDL_main(int argc, char *argv[]) {
 
 	/* SET TEXTURE INFORMATION */
 	// ========================================================================
+	glBindVertexArray(verArray);
 
 	// NOTE: allocate a GPU texture
 	GLuint tex;
@@ -633,6 +634,42 @@ int SDL_main(int argc, char *argv[]) {
 	nSurface = NULL;
 
 	// NOTE: free the original surface	
+	SDL_FreeSurface(surface);
+	surface = NULL;
+
+	// ========================================================================
+	// NOTE: sword
+	glBindVertexArray(sverArray);
+
+	GLuint stex;
+	glGenTextures(1, &stex);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, stex);
+
+	surface = SDL_LoadBMP("tex00.bmp");
+	if(surface == NULL) {
+		fprintf(stderr, "SDL_LoadBMP: %s\n", SDL_GetError());
+		return -1;
+	}
+
+	newFormat = *surface->format;
+
+	newFormat.Rmask = 0x000000FF;
+	newFormat.Gmask = 0x0000FF00;
+	newFormat.Bmask = 0x00FF0000;
+	newFormat.Amask = 0xFF000000;
+
+	nSurface = SDL_ConvertSurface(surface, &newFormat, 0);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, nSurface->pixels);
+	glUniform1i(glGetUniformLocation(shaderProgram, "tex"), 1);
+
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	SDL_FreeSurface(nSurface);
+	nSurface = NULL;
+
 	SDL_FreeSurface(surface);
 	surface = NULL;
 
@@ -849,6 +886,7 @@ int SDL_main(int argc, char *argv[]) {
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
+		glBindTexture(GL_TEXTURE_2D, tex);
 		glDrawArrays(GL_TRIANGLES, 0, inds->num);
 
 		// NOTE: draw sword
@@ -864,15 +902,11 @@ int SDL_main(int argc, char *argv[]) {
 		smodel = glm::rotate(smodel, (float) sangle+(float) M_PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 		smodel = glm::rotate(smodel, (float) -M_PI/2.0f, glm::vec3(0.0f, 0.0f, 1.0f));
 
-		//smodel = glm::rotate(smodel, (float) M_PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-		//smodel = glm::rotate(smodel, (float) -M_PI/2.0f, glm::vec3(0.0f, 0.0f, 1.0f));
-		//smodel = glm::rotate(smodel, -glm::angle(m_direction, glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
-		//smodel = glm::translate(smodel, glm::vec3(-5.0f, -1.0f, 8.0f));
-
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(smodel));
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
+		glBindTexture(GL_TEXTURE_2D, stex);
 		glDrawArrays(GL_TRIANGLES, 0, sinds->num);
 
 		/* END TESTING */
