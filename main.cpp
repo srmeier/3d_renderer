@@ -13,6 +13,7 @@ running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/rotate_vector.hpp"
+#include "glm/gtx/vector_angle.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 #include "GL/glew.h"
@@ -482,7 +483,10 @@ int SDL_main(int argc, char *argv[]) {
 	VertInfo* verts = NULL;
 
 	loadObjFile(&verts, &inds, argv[1]);
-	//loadObjFile(&verts, &inds, argv[1]);
+
+	IndInfo* sinds = NULL;
+	VertInfo* sverts = NULL;
+	loadObjFile(&sverts, &sinds, "sword.obj");
 
 	/* END TEST OBJ FILE PARSING */
 	// ========================================================================
@@ -549,6 +553,34 @@ int SDL_main(int argc, char *argv[]) {
 	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), (void *)(3*sizeof(GLfloat)));
 
 	// NOTE: enable the attribute
+	glEnableVertexAttribArray(texAttrib);
+
+	// ========================================================================
+	// NOTE: sword
+	GLuint sverArray;
+	glGenVertexArrays(1, &sverArray);
+	glBindVertexArray(sverArray);
+
+	GLfloat sglVerts[5*sinds->num];
+	memset(sglVerts, 0x00, 5*sinds->num*sizeof(GLfloat));
+
+	for(i=0; i<sinds->num; i++) {
+		sglVerts[5*i+0] = sverts->pos[3*sinds->pos[i]+0];
+		sglVerts[5*i+1] = sverts->pos[3*sinds->pos[i]+1];
+		sglVerts[5*i+2] = sverts->pos[3*sinds->pos[i]+2];
+		sglVerts[5*i+3] = sverts->tex[2*sinds->tex[i]+0];
+		sglVerts[5*i+4] = sverts->tex[2*sinds->tex[i]+1];
+	}
+
+	GLuint sverBuffer;
+	glGenBuffers(1, &sverBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, sverBuffer);
+	glBufferData(GL_ARRAY_BUFFER, 5*sinds->num*sizeof(GLfloat), sglVerts, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), 0);
+	glEnableVertexAttribArray(posAttrib);
+
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 5*sizeof(GLfloat), (void *)(3*sizeof(GLfloat)));
 	glEnableVertexAttribArray(texAttrib);
 
 	/* END SET VERTEX INFORMATION */
@@ -811,7 +843,37 @@ int SDL_main(int argc, char *argv[]) {
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
 		// NOTE: draw to the screen
+		glBindVertexArray(verArray);
+		
+		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+
 		glDrawArrays(GL_TRIANGLES, 0, inds->num);
+
+		// NOTE: draw sword
+		glBindVertexArray(sverArray);
+
+		glm::mat4 smodel;
+
+		smodel = glm::translate(smodel, m_position);
+		float sangle = glm::sign(m_direction.x)*glm::angle(glm::normalize(m_direction), glm::vec3(0.0f, 0.0f, 1.0f));
+		glm::vec3 spos = glm::rotate(glm::vec3(-5.0f, -1.0f, 8.0f), sangle, glm::vec3(0.0f, 1.0f, 0.0f));
+		smodel = glm::translate(smodel, spos);
+
+		smodel = glm::rotate(smodel, (float) sangle+(float) M_PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+		smodel = glm::rotate(smodel, (float) -M_PI/2.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+
+		//smodel = glm::rotate(smodel, (float) M_PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+		//smodel = glm::rotate(smodel, (float) -M_PI/2.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+		//smodel = glm::rotate(smodel, -glm::angle(m_direction, glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(0.0f, 1.0f, 0.0f));
+		//smodel = glm::translate(smodel, glm::vec3(-5.0f, -1.0f, 8.0f));
+
+		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(smodel));
+		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+
+		glDrawArrays(GL_TRIANGLES, 0, sinds->num);
 
 		/* END TESTING */
 		// ====================================================================
