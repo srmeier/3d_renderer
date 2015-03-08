@@ -567,7 +567,7 @@ int SDL_main(int argc, char *argv[]) {
 	glBindTexture(GL_TEXTURE_2D, tex);
 
 	// NOTE: load the bitmap SDL surface for texture pixels
-	SDL_Surface *surface = SDL_LoadBMP("tex02.bmp");
+	SDL_Surface *surface = SDL_LoadBMP("tex03.bmp");
 
 	if(surface == NULL) {
 		fprintf(stderr, "SDL_LoadBMP: %s\n", SDL_GetError());

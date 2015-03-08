@@ -1,0 +1,107 @@
+header {
+  version { "0.98" }
+  build { "2014.01.23" }
+}
+environment {
+  grid { 1 10 50 50 }
+  lighting {
+    intensity { 1 }
+    ambientintensity { 0.20000 }
+  }
+  framerate { 24 }
+  film {
+    size { 400 300 }
+    ratio { 4 3 }
+  }
+}
+texture { "tex02"
+  file { "C:\\Users\\Stephen\\Documents\\GitHub\\3d_renderer\\tex02.bmp" }
+}
+texture { "tex03"
+  file { "C:\\Users\\Stephen\\Documents\\GitHub\\3d_renderer\\tex03.bmp" }
+}
+object { "object01"
+  material { "material01"
+    surface {
+      /* RGB chunk no longer used */
+      rgb { 255 255 255 }
+      lockambiantdiffuse { }
+      ambiant {
+        rgb { 255 255 255 }
+        factor { 0.30000 }
+      }
+      diffuse {
+        rgb { 255 255 255 }
+        factor { 0.70000 }
+        texturename { "tex02" }
+        textureparams {
+          blendmode { decal }
+          alphamode { none }
+        }
+      }
+      specular {
+        rgb { 255 255 255 }
+        factor { 0.20000 }
+      }
+      phongsize { 32 }
+    }
+  }
+  material { "material02"
+    surface {
+      /* RGB chunk no longer used */
+      rgb { 255 255 255 }
+      lockambiantdiffuse { }
+      ambiant {
+        rgb { 255 255 255 }
+        factor { 0.30000 }
+      }
+      diffuse {
+        rgb { 255 255 255 }
+        factor { 0.70000 }
+        texturename { "tex03" }
+        textureparams {
+          blendmode { decal }
+          alphamode { none }
+        }
+      }
+      specular {
+        rgb { 255 255 255 }
+        factor { 0.20000 }
+      }
+      phongsize { 32 }
+    }
+  }
+  mesh {
+    name { "mesh01" }
+    material { " -- default --" }
+    smoothangle { 45 }
+    texgen {
+      mode { "planar" }
+      scale { 80 80 }
+      center { (0 0 0) }
+      up { (1 0 0) }
+      forward { (0 -1 0) }
+    }
+    /* 8 points, 5 faces, 20 uvCoords */
+    materiallist {
+      materialname { " -- default --" }
+      materialname { "material02" }
+      materialname { "material01" }
+    }
+    points {
+      (-40 -40 -40) (-40 -40 40) (-40 40 -40) (-40 40 40) (40 -40 -40) 
+      (40 -40 40) (40 40 -40) (40 40 40)
+    }
+    texcoords {
+      (0 0) (0 0) (0 1) (0 1) (1 0) (1 0) (1 1) (1 1) (0 0) (0 1) (1 1) (1 0) 
+      (0 0) (1 0) (1 1) (0 1) (0 0) (0 1) (1 1) (1 0)
+    }
+    faces {
+      4 4 2 -1 ( (0 0) (4 4) (6 6) (2 2) )
+      4 4 2 -1 ( (1 1) (3 3) (7 7) (5 5) )
+      4 4 2 -1 ( (0 12) (2 13) (3 14) (1 15) )
+      4 4 2 -1 ( (4 16) (5 17) (7 18) (6 19) )
+      4 4 1 -1 ( (0 8) (1 9) (5 10) (4 11) )
+    }
+  }
+}
