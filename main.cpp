@@ -713,6 +713,7 @@ int SDL_main(int argc, char *argv[]) {
 			}
 		}
 
+		// NOTE: move around with left dpad
 		if(pl_input.up) {
 			m_position += m_direction;
 
@@ -735,12 +736,17 @@ int SDL_main(int argc, char *argv[]) {
 			m_direction = glm::rotate(m_direction, -angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 
-		uint8_t b_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_B);
-		if(b_bnt) running = SDL_FALSE;
+		// NOTE: clse on start button
+		uint8_t start_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_START);
+		if(start_bnt) running = SDL_FALSE;
 
-		uint8_t a_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_A);
-		if(a_bnt) printf("switch vertex buffers\n");
+		//uint8_t b_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_B);
+		//if(b_bnt) running = SDL_FALSE;
 
+		//uint8_t a_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_A);
+		//if(a_bnt) printf("switch vertex buffers\n");
+
+		// NOTE: strafe on left trigger
 		uint8_t l_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
 		if(l_trig) {
 			m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -749,6 +755,7 @@ int SDL_main(int argc, char *argv[]) {
 				m_position += glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 
+		// NOTE: strafe on right trigger
 		uint8_t r_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
 		if(r_trig) {
 			m_position += glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -757,6 +764,7 @@ int SDL_main(int argc, char *argv[]) {
 				m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 
+		// NOTE: get axis numbers
 		int x_axisl = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTX);
 		int y_axisl = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTY);
 
@@ -769,7 +777,8 @@ int SDL_main(int argc, char *argv[]) {
 
 		/* TESTING */
 		// ====================================================================
-		// NOTE: test spinning
+		
+		// NOTE: easy movement with the left stick
 		if(abs(x_axisl)>10000) {
 			m_direction = glm::rotate(m_direction, (float) -x_axisl/1000000.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
@@ -797,6 +806,7 @@ int SDL_main(int argc, char *argv[]) {
 		}
 		*/
 
+		// NOTE: apply the input modifications
 		view = glm::lookAt(m_position, m_position+m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
