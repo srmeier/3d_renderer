@@ -510,44 +510,9 @@ int SDL_main(int argc, char *argv[]) {
 		glVerts[5*i+0] = verts->pos[3*inds->pos[i]+0];
 		glVerts[5*i+1] = verts->pos[3*inds->pos[i]+1];
 		glVerts[5*i+2] = verts->pos[3*inds->pos[i]+2];
-
 		glVerts[5*i+3] = verts->tex[2*inds->tex[i]+0];
 		glVerts[5*i+4] = verts->tex[2*inds->tex[i]+1];
 	}
-
-	/*
-	GLfloat glVerts[5*verts->num];
-	memset(glVerts, 0x00, 5*verts->num*sizeof(GLfloat));
-
-	// NOTE: vertices for a triangle (clockwise)
-	int tempInd = 0;
-	for(; tempInd<verts->num; tempInd++) {
-		glVerts[5*tempInd+0] = verts->pos[3*tempInd+0];
-		glVerts[5*tempInd+1] = verts->pos[3*tempInd+1];
-		glVerts[5*tempInd+2] = verts->pos[3*tempInd+2];
-
-		// NOTE: find the vertex index in the vert index array
-		int i;
-		GLuint temp = 0;
-		SDL_bool first = SDL_TRUE;
-		for(i=0; i<inds->num; i++) {
-			if(inds->pos[i] == tempInd) {
-				// NOTE: once the index into the vert index array is found
-				// pull the corresponding texture info
-
-				glVerts[5*tempInd+3] = verts->tex[2*inds->tex[i]+0];
-				glVerts[5*tempInd+4] = verts->tex[2*inds->tex[i]+1];
-				//break;
-				if(first) {
-					temp = inds->tex[i];
-					first = SDL_FALSE;
-				} else {
-					if(temp != inds->tex[i]) printf("NOOOOOOOOOO\n");
-				}
-			}
-		}
-	}
-	*/
 
 	// NOTE: allocate an array buffer on the GPU
 	GLuint verBuffer;
@@ -558,7 +523,6 @@ int SDL_main(int argc, char *argv[]) {
 
 	// NOTE: send our vertex data to the GPU and set as STAIC
 	glBufferData(GL_ARRAY_BUFFER, 5*inds->num*sizeof(GLfloat), glVerts, GL_STATIC_DRAW);
-	//glBufferData(GL_ARRAY_BUFFER, 5*verts->num*sizeof(GLfloat), glVerts, GL_STATIC_DRAW);
 
 	// NOTE: get a pointer to the position attribute variable in the shader
 	// program
@@ -587,25 +551,6 @@ int SDL_main(int argc, char *argv[]) {
 	glEnableVertexAttribArray(texAttrib);
 
 	/* END SET VERTEX INFORMATION */
-	// ========================================================================
-
-	/* SET ELEMENT INFORMATION */
-	// ========================================================================
-
-	// NOTE: index into the raw vertex array
-	// inds->pos
-
-	// NOTE: allocate a GPU buffer for the element data
-	GLuint eleBuffer;
-	glGenBuffers(1, &eleBuffer);
-
-	// NOTE: bind to the element buffer so that we may send our data to the GPU
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eleBuffer);
-
-	// NOTE: send our element data to the GPU and set as STAIC
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, inds->num*sizeof(GLuint), inds->pos, GL_STATIC_DRAW);
-
-	/* END SET ELEMENT INFORMATION */
 	// ========================================================================
 
 	/* SET TEXTURE INFORMATION */
@@ -818,7 +763,6 @@ int SDL_main(int argc, char *argv[]) {
 
 		// NOTE: draw to the screen
 		glDrawArrays(GL_TRIANGLES, 0, inds->num);
-		//glDrawElements(GL_TRIANGLES, inds->num, GL_UNSIGNED_INT, 0);
 
 		/* END TESTING */
 		// ====================================================================
@@ -834,7 +778,6 @@ int SDL_main(int argc, char *argv[]) {
 	glDeleteTextures(1, &tex);
 
 	// NOTE: free the arrays buffer on the GPU
-	glDeleteBuffers(1, &eleBuffer);
 	glDeleteBuffers(1, &verBuffer);
 
 	// NOTE: free the vertex array attribute relation on the GPU
