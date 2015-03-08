@@ -681,6 +681,10 @@ int SDL_main(int argc, char *argv[]) {
 
 	float cBoxW = 95.0f;
 
+	int swing_frame = 0;
+	SDL_bool swinging = SDL_FALSE;
+	SDL_bool swing_forward = SDL_TRUE;
+
 	glm::vec3 m_position(0.0f, 0.0f, 0.0f);
 	glm::vec3 m_direction(0.0f, 0.0f, 1.0f);
 
@@ -815,6 +819,13 @@ int SDL_main(int argc, char *argv[]) {
 		//uint8_t a_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_A);
 		//if(a_bnt) printf("switch vertex buffers\n");
 
+		uint8_t y_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_Y);
+		if(y_bnt && !swinging) {
+			swing_frame = 0;
+			swinging = SDL_TRUE;
+			swing_forward = SDL_TRUE;
+		}
+
 		// NOTE: strafe on left trigger
 		uint8_t l_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
 		if(l_trig) {
@@ -892,15 +903,28 @@ int SDL_main(int argc, char *argv[]) {
 		// NOTE: draw sword
 		glBindVertexArray(sverArray);
 
-		glm::mat4 smodel;
+		// NOTE: sword transform
+		if((swinging&&swing_forward) && swing_frame<60) {
+			swing_frame+=2;
+		} else if((swinging&&!swing_forward) && swing_frame>0) {
+			swing_frame-=2;
+		} else {
+			if(swing_forward) {
+				swing_forward = SDL_FALSE;
+			} else {
+				swing_frame = 0;
+				swinging = SDL_FALSE;
+				swing_forward = SDL_TRUE;
+			}
+		}
 
+		glm::mat4 smodel;
 		smodel = glm::translate(smodel, m_position);
 		float sangle = glm::sign(m_direction.x)*glm::angle(glm::normalize(m_direction), glm::vec3(0.0f, 0.0f, 1.0f));
-		glm::vec3 spos = glm::rotate(glm::vec3(-5.0f, -1.0f, 8.0f), sangle, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::vec3 spos = glm::rotate(glm::vec3(-5.0f+(float)swing_frame/10.0f, -1.5f-(float)swing_frame/20.0f, 8.0f), sangle, glm::vec3(0.0f, 1.0f, 0.0f));
 		smodel = glm::translate(smodel, spos);
-
 		smodel = glm::rotate(smodel, (float) sangle+(float) M_PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-		smodel = glm::rotate(smodel, (float) -M_PI/2.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+		smodel = glm::rotate(smodel, (float) -M_PI/2.0f+(float) (swing_frame/180.0f)*(float)M_PI, glm::vec3(0.0f, 0.0f, 1.0f));
 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(smodel));
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
