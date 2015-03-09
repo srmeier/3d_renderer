@@ -11,6 +11,7 @@ running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 #include <string.h>
 
 #include "glm/glm.hpp"
+#include "glm/gtx/transform.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/rotate_vector.hpp"
 #include "glm/gtx/vector_angle.hpp"
@@ -89,7 +90,6 @@ Mesh::~Mesh(void) {
 void Mesh::render(void) {
 	if(!glLoaded) return;
 
-	//glBind();
 	glDrawArrays(GL_TRIANGLES, 0, inds->num);
 }
 
@@ -134,7 +134,7 @@ void Mesh::glLoad(void) {
 	numLoadedTextures++;
 
 	// NOTE: set the shader program variables
-	glUniform1i(glGetUniformLocation(shaderProgram, "tex"), numLoadedTextures-1);
+	glUniform1i(glGetUniformLocation(shaderProgram, "tex"), (numLoadedTextures-1));
 	glGenerateMipmap(GL_TEXTURE_2D);
 
 	GLint posAttrib = glGetAttribLocation(shaderProgram, "pos");
@@ -586,6 +586,8 @@ int SDL_main(int argc, char *argv[]) {
 		smodel = glm::translate(smodel, spos);
 		smodel = glm::rotate(smodel, (float) sangle+(float) M_PI/2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 		smodel = glm::rotate(smodel, (float) -M_PI/2.0f+(float) (swing_frame/180.0f)*(float)M_PI, glm::vec3(0.0f, 0.0f, 1.0f));
+
+		//smodel = glm::scale(smodel, glm::vec3(0.5f, 0.5f, 0.5f));
 
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(smodel));
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
