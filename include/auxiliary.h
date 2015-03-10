@@ -3,6 +3,300 @@
 #define _AUXILIARY_H_
 
 //-----------------------------------------------------------------------------
+typedef struct {
+	SDL_bool up;
+	int m_x, m_y;
+	SDL_bool down;
+	SDL_bool left;
+	SDL_bool right;
+	SDL_bool m_left;
+	SDL_bool m_right;
+	SDL_bool w, a, s, d;
+} Input;
+
+//-----------------------------------------------------------------------------
+Input pl_input;
+GLenum glError;
+SDL_Event event;
+SDL_bool running;
+SDL_Window *window;
+SDL_GLContext context;
+SDL_GameController *p1_controller;
+
+//-----------------------------------------------------------------------------
+void pollInput(void) {
+	// NOTE: poll for player input
+	while(SDL_PollEvent(&event)) {
+		switch(event.type) {
+			// NOTE: if the player clicks on the X button close the window
+			case SDL_QUIT: {
+				running = SDL_FALSE;
+			} break;
+
+			// NOTE: check the location of the mouse pointer
+			case SDL_MOUSEMOTION: {
+				pl_input.m_x = event.motion.x;
+				pl_input.m_y = event.motion.y;
+			} break;
+
+			// NOTE: check the mouse buttons are up
+			case SDL_MOUSEBUTTONUP: {
+				switch(event.button.button) {
+					case SDL_BUTTON_LEFT: {
+						pl_input.m_left = SDL_FALSE;
+					} break;
+					case SDL_BUTTON_RIGHT: {
+						pl_input.m_right = SDL_FALSE;
+					} break;
+				}
+			} break;
+
+			// NOTE: check the mouse buttons are down
+			case SDL_MOUSEBUTTONDOWN: {
+				switch(event.button.button) {
+					case SDL_BUTTON_LEFT: {
+						pl_input.m_left = SDL_TRUE;
+					} break;
+					case SDL_BUTTON_RIGHT: {
+						pl_input.m_right = SDL_TRUE;
+					} break;
+				}
+			} break;
+
+			// NOTE: set any pressed keys to the down position
+			case SDL_KEYDOWN: {
+				switch(event.key.keysym.sym) {
+					case SDLK_ESCAPE: running = SDL_FALSE; break;
+					case SDLK_w: pl_input.w = SDL_TRUE; break;
+					case SDLK_a: pl_input.a = SDL_TRUE; break;
+					case SDLK_s: pl_input.s = SDL_TRUE; break;
+					case SDLK_d: pl_input.d = SDL_TRUE; break;
+					case SDLK_UP: pl_input.up = SDL_TRUE; break;
+					case SDLK_DOWN: pl_input.down = SDL_TRUE; break;
+					case SDLK_LEFT: pl_input.left = SDL_TRUE; break;
+					case SDLK_RIGHT: pl_input.right = SDL_TRUE; break;
+				}
+			} break;
+
+			// NOTE: set any keys that aren't pressed to the up position
+			case SDL_KEYUP: {
+				switch(event.key.keysym.sym) {
+					case SDLK_w: pl_input.w = SDL_FALSE; break;
+					case SDLK_a: pl_input.a = SDL_FALSE; break;
+					case SDLK_s: pl_input.s = SDL_FALSE; break;
+					case SDLK_d: pl_input.d = SDL_FALSE; break;
+					case SDLK_UP: pl_input.up = SDL_FALSE; break;
+					case SDLK_DOWN: pl_input.down = SDL_FALSE; break;
+					case SDLK_LEFT: pl_input.left = SDL_FALSE; break;
+					case SDLK_RIGHT: pl_input.right = SDL_FALSE; break;
+				}
+			} break;
+		}
+	}
+}
+
+//-----------------------------------------------------------------------------
+GLuint vertShader;
+GLuint fragShader;
+GLuint shaderProgram0;
+
+//-----------------------------------------------------------------------------
+void buildShaderProgram0(void) {
+	// NOTE: source code for the vertex shader
+	const GLchar* vertSource = {
+		"#version 150 core\n"\
+		"\n"\
+		"in vec3 pos;\n"\
+		"in vec2 texcoord;\n"\
+		"\n"\
+		"out vec2 fragTexcoord;\n"\
+		"\n"\
+		"uniform mat4 model;\n"\
+		"uniform mat4 view;\n"\
+		"uniform mat4 proj;\n"\
+		"\n"\
+		"void main() {\n"\
+			"fragTexcoord = texcoord;\n"\
+			"gl_Position = proj*view*model*vec4(pos, 1.0);\n"\
+		"}\n"\
+		"\0"
+	};
+
+	// NOTE: allocate vertex shader program
+	vertShader = glCreateShader(GL_VERTEX_SHADER);
+
+	// NOTE: load the vertex shader's source code
+	glShaderSource(vertShader, 1, &vertSource, NULL);
+
+	// NOTE: compile the vertex shader's source code
+	glCompileShader(vertShader);
+
+	// NOTE: get the status of the compilation
+	GLint status;
+	glGetShaderiv(vertShader, GL_COMPILE_STATUS, &status);
+
+	// NOTE: if the compilation failed print the error
+	if(status == GL_FALSE) {
+		char buffer[512];
+		glGetShaderInfoLog(vertShader, 512, NULL, buffer);
+		fprintf(stderr, "glCompileShader: %s\n", buffer);
+		exit(-1);
+	}
+
+	// NOTE: source code for the fragment shader
+	const GLchar* fragSource = {
+		"#version 150 core\n"\
+		"\n"\
+		"in vec2 fragTexcoord;\n"\
+		"uniform sampler2D tex;\n"\
+		"\n"\
+		"void main() {\n"\
+			"gl_FragColor = texture(tex, fragTexcoord)*vec4(1.0, 1.0, 1.0, 1.0);\n"\
+		"}\n"\
+		"\0"
+	};
+
+	// NOTE: allocate fragment shader program
+	fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+
+	// NOTE: load the fragment shader's source code
+	glShaderSource(fragShader, 1, &fragSource, NULL);
+
+	// NOTE: compile the vertex shader's source code
+	glCompileShader(fragShader);
+
+	// NOTE: get the status of the compilation
+	glGetShaderiv(fragShader, GL_COMPILE_STATUS, &status);
+
+	// NOTE: if the compilation failed print the error
+	if(status == GL_FALSE) {
+		char buffer[512];
+		glGetShaderInfoLog(fragShader, 512, NULL, buffer);
+		fprintf(stderr, "glCompileShader: %s\n", buffer);
+		exit(-1);
+	}
+
+	// NOTE: create a shader program out of the vertex and fragment shaders
+	shaderProgram0 = glCreateProgram();
+
+	// NOTE: attach the vertex and fragment shaders
+	glAttachShader(shaderProgram0, vertShader);
+	glAttachShader(shaderProgram0, fragShader);
+
+	// NOTE: link the shader program
+	glLinkProgram(shaderProgram0);
+
+	// NTOE: get the status of linking the program
+	glGetProgramiv(shaderProgram0, GL_LINK_STATUS, &status);
+
+	// NOTE: if the program failed to link print the error
+	if(status == GL_FALSE) {
+		char buffer[512];
+		glGetProgramInfoLog(shaderProgram0, 512, NULL, buffer);
+		fprintf(stderr, "glLinkProgram: %s\n", buffer);
+		exit(-1);
+	}
+
+	// NOTE: use the newly compiled shader program
+	glUseProgram(shaderProgram0);
+}
+
+//-----------------------------------------------------------------------------
+void startGame(void) {
+	// NOTE: initialize SDL2 library
+	if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+		fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
+		exit(-1);
+	}
+
+	// NOTE: get player one's controller
+	if(SDL_NumJoysticks()>0) {
+		if(SDL_IsGameController(0)) {
+			p1_controller = SDL_GameControllerOpen(0);
+		} else {
+			// NOTE: something is wrong with selected controller
+			fprintf(stderr, "SDL_GameControllerOpen: %s\n", SDL_GetError());
+			exit(-1);
+		}
+	} else {
+		// NOTE: currently requiring a controller connection
+		printf("\nPlease connect a controller.\n\n");
+		exit(-1);
+	}
+
+	// NOTE: create game window
+	window = SDL_CreateWindow(
+		"Prototype",
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		2*640,
+		2*480,
+		SDL_WINDOW_OPENGL
+	);
+
+	if(window == NULL) {
+		fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
+		exit(-1);
+	}
+
+	// NOTE: create an OpenGL context for the window
+	context = SDL_GL_CreateContext(window);
+
+	if(context == NULL) {
+		fprintf(stderr, "SDL_GL_CreateContext: %s\n", SDL_GetError());
+		exit(-1);
+	}
+
+	// NOTE: set the buffer swap interval to get vsync
+	if(SDL_GL_SetSwapInterval(1) != 0) {
+		fprintf(stderr, "SDL_GL_SetSwapInterval: %s\n", SDL_GetError());
+		exit(-1);
+	}
+
+	// NTOE: initialize the OpenGL library function calls
+	glError = glewInit();
+
+	if(glError != GLEW_OK) {
+		fprintf(stderr, "glewInit: %s\n", glewGetErrorString(glError));
+		exit(-1);
+	}
+
+	// NOTE: enable the depth test
+	glEnable(GL_DEPTH_TEST);
+
+	// NOTE: build the shader program
+	buildShaderProgram0();
+}
+
+//-----------------------------------------------------------------------------
+void endGame(void) {
+	// NOTE: detach the vertex and fragment shaders from the one shader program
+	glDetachShader(shaderProgram0, vertShader);
+	glDetachShader(shaderProgram0, fragShader);
+
+	// NOTE: delete the shader program
+	glDeleteProgram(shaderProgram0);
+
+	// NOTE: delete the compiled shaders from the GPU
+	glDeleteShader(vertShader);
+	glDeleteShader(fragShader);
+
+	// NOTE: free the OpenGL context
+	SDL_GL_DeleteContext(context);
+	context = NULL;
+	
+	// NOTE: free the SDL2 window
+	SDL_DestroyWindow(window);
+	window = NULL;
+
+	// NOTE: free player one's controller
+	SDL_GameControllerClose(p1_controller);
+
+	// NOTE: quit the SDL2 library
+	SDL_Quit();
+}
+
+//-----------------------------------------------------------------------------
 size_t numLoadedTextures = 0;
 
 //-----------------------------------------------------------------------------
