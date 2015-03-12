@@ -15,6 +15,7 @@ running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/rotate_vector.hpp"
 #include "glm/gtx/vector_angle.hpp"
+#include "glm/gtx/perpendicular.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
 #include "GL/glew.h"
@@ -111,17 +112,28 @@ int SDL_main(int argc, char *argv[]) {
 			m_direction = glm::rotate(m_direction, -angle, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
 
-		// NOTE: clse on start button
+		// NOTE: close on start button
 		uint8_t start_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_START);
 		if(start_bnt) running = SDL_FALSE;
 
+		/*
+		// NOTE: swing sword on Y button
 		uint8_t y_bnt = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_Y);
 		if(y_bnt && !swinging) {
 			swing_frame = 0;
 			swinging = SDL_TRUE;
 			swing_forward = SDL_TRUE;
 		}
+		*/
 
+		uint8_t r_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
+		if(r_trig && !swinging) {
+			swing_frame = 0;
+			swinging = SDL_TRUE;
+			swing_forward = SDL_TRUE;
+		}
+
+		/*
 		// NOTE: strafe on left trigger
 		uint8_t l_trig = SDL_GameControllerGetButton(p1_controller, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
 		if(l_trig) {
@@ -139,6 +151,7 @@ int SDL_main(int argc, char *argv[]) {
 			if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
 				m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
 		}
+		*/
 
 		// NOTE: get axis numbers
 		int x_axisl = SDL_GameControllerGetAxis(p1_controller, SDL_CONTROLLER_AXIS_LEFTX);
@@ -149,7 +162,21 @@ int SDL_main(int argc, char *argv[]) {
 
 		// NOTE: easy movement with the left stick
 		if(abs(x_axisl)>10000) {
-			m_direction = glm::rotate(m_direction, (float) -x_axisl/1000000.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+			//m_direction = glm::rotate(m_direction, (float) -x_axisl/1000000.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+
+			if(x_axisl>0) {
+				m_position += glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+
+				if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
+					m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+			}
+
+			if(x_axisl<0) {
+				m_position -= glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+
+				if((m_position.x>cBoxW||m_position.x<-cBoxW) || (m_position.z>cBoxW||m_position.z<-cBoxW))
+					m_position += glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+			}
 		}
 
 		if(abs(y_axisl)>10000) {
@@ -168,7 +195,25 @@ int SDL_main(int argc, char *argv[]) {
 			}
 		}
 
-		view = glm::lookAt(m_position, m_position+m_direction, glm::vec3(0.0f, 1.0f, 0.0f));
+		// NOTE: right axis
+		if(abs(x_axisr)>10000) {
+			m_direction = glm::rotate(m_direction, (float) -x_axisr/1000000.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+		}
+
+		static glm::vec3 tempV;
+		static float tempAng = 0.0f;
+
+		if(abs(y_axisr)>10000) {
+			tempAng += (float) -y_axisr/1000000.0f;
+		} tempV = glm::rotate(m_direction, tempAng, glm::cross(m_direction, glm::vec3(0.0f, 1.0f, 0.0f)));
+
+		/*
+		- for lock-on I think I'll have to manually set the m_direction vector
+		- this is probably the simplest way of doing lock-on
+		*/
+
+		// NOTE: set the view matrix
+		view = glm::lookAt(m_position, m_position+tempV, glm::vec3(0.0f, 1.0f, 0.0f));
 
 		// NOTE: sword transform
 		if((swinging&&swing_forward) && swing_frame<60) {
