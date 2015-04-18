@@ -1,5 +1,5 @@
 /* Prototype
-g++ main.cpp -o test.exe -I./include -L./lib -lmingw32 -lglew32 -lopengl32 -lSDL2main -lSDL2
+g++ main.cpp -o test.exe -I./include -L./lib -lmingw32 -lglew32 -lopengl32 -lSDL2main -lSDL2 -lBulletDynamics -lBulletCollision -lLinearMath -lOpenGLSupport
 running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 */
 
@@ -24,6 +24,9 @@ running on GCC 4.8.1, SDL 2.0.1, GLEW 1.10.0, and GLM 0.9.6.1
 
 #include "auxiliary.h"
 #include "mesh.h"
+
+#include "btBulletDynamicsCommon.h"
+#include "btBulletCollisionCommon.h"
 
 //-----------------------------------------------------------------------------
 int SDL_main(int argc, char *argv[]) {
