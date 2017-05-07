@@ -13,9 +13,10 @@ Camera::Camera(SDL_Window* window) {
 	_window = window;
 	_framebuffer_w = 0;
 	_framebuffer_h = 0;
-	_pos = glm::vec3(0.f, 0.f, -2.f);
+	_pos = glm::vec3(0.f, 0.5f, 4.f);
 	_yaw = 0.0f;
-	_pitch = 180.0f;
+	_pitch = 0.0f;
+	_roll = 0.0f;
 
 	ShaderProgram::Files shader_files[] = {
 		{"test.vert", "test.frag"}
@@ -40,9 +41,12 @@ Camera::~Camera(void) {
 
 //-----------------------------------------------------------------------------
 void Camera::setView(void) {
+	// TODO: add a "dirty" check
 	glm::mat4 view = glm::translate(glm::mat4(), _pos);
 	view = glm::rotate(view, glm::radians(_yaw), glm::vec3(0.0f, 1.0f, 0.0f));
 	view = glm::rotate(view, glm::radians(_pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+	view = glm::rotate(view, glm::radians(_roll), glm::vec3(0.0f, 0.0f, 1.0f));
+	view = glm::inverse(view);
 
 	for(int i=0; i<NUM_SHADER_PROGRAM_TYPES; ++i) {
 		_shader_programs[i]->use();
@@ -56,7 +60,7 @@ void Camera::setProjection(void) {
 	glViewport(0, 0, _framebuffer_w, _framebuffer_h);
 
 	glm::mat4 proj;
-	proj = glm::perspective(80.0f,
+	proj = glm::perspective(45.0f,
 		(float)_framebuffer_w/(float)_framebuffer_h, 0.1f, 512.0f
 	);
 
@@ -64,4 +68,9 @@ void Camera::setProjection(void) {
 		_shader_programs[i]->use();
 		_shader_programs[i]->setUniformMatrix4fv("proj", proj);
 	}
+}
+
+//-----------------------------------------------------------------------------
+void Camera::update(void) {
+	setView();
 }

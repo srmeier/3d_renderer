@@ -8,6 +8,10 @@
 Mesh::Mesh(ShaderProgram* program, MeshData* mesh_data, TextureData* texture_data) {
 	_mesh_data = mesh_data;
 	_texture_data = texture_data;
+	_pos = glm::vec3(0.f, 0.0f, 2.f);
+	_yaw = 0.0f;
+	_pitch = 0.0f;
+	_roll = 0.0f;
 
 	program->addMesh(this);
 
@@ -122,19 +126,19 @@ Mesh::Mesh(ShaderProgram* program, MeshData* mesh_data, TextureData* texture_dat
 
 //-----------------------------------------------------------------------------
 Mesh::~Mesh(void) {
-
+	// TODO: release the GL stuff
 }
 
 //-----------------------------------------------------------------------------
 void Mesh::render(ShaderProgram* program) {
 	// TODO: add a "dirty" check
-	//m_mat4Model = m_mat4Trans*quat_to_mat4(m_quatRot)*m_mat4Scale;
-
-	static glm::mat4 model = glm::mat4();
-	model = glm::rotate(model, 0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 model = glm::translate(glm::mat4(), _pos);
+	model = glm::rotate(model, glm::radians(_yaw), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(_pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(_roll), glm::vec3(0.0f, 0.0f, 1.0f));
 
 	program->use();
-	program->setUniformMatrix4fv("model", model); // temp
+	program->setUniformMatrix4fv("model", model); // temp?
 
 	glBindVertexArray(_vert_array);
 
