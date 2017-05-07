@@ -7,6 +7,7 @@
 //-----------------------------------------------------------------------------
 std::map<std::string, MeshData> ResourceManager::_mesh_data_map;
 std::map<std::string, TextureData> ResourceManager::_texture_data_map;
+std::map<std::string, SkinData> ResourceManager::_skin_data_map;
 
 //-----------------------------------------------------------------------------
 MeshData* ResourceManager::LoadMeshData(const std::string filename) {
@@ -247,6 +248,81 @@ TextureData* ResourceManager::LoadTextureData(const std::string filename) {
 
 	std::pair<std::map<std::string, TextureData>::iterator, bool> ret;
 	ret = _texture_data_map.insert(std::make_pair(filename, texture_data));
+	if(ret.second == false) {
+		SDL_Log("Duplicate!!\n");
+		exit(-1);
+	}
+
+	return &ret.first->second;
+}
+
+//-----------------------------------------------------------------------------
+SkinData* ResourceManager::LoadSkinData(const std::string filename) {
+	std::map<std::string, SkinData>::iterator iter;
+
+	iter = _skin_data_map.find(filename);
+	if(iter != _skin_data_map.end()) {
+		return &iter->second;
+	}
+
+	SkinData skin_data = {};
+	FILE* file_ptr = fopen(filename.c_str(), "rb");
+	if(file_ptr == NULL) {
+		SDL_Log("Missing skin \"%s\"\n", filename.c_str());
+		return NULL;
+	}
+
+	int name_length = 0;
+	fread(&name_length, sizeof(int), 1, file_ptr);
+	char name[0xFF] = {};
+	if(name_length > 0) {
+		memset(name, 0x00, (name_length+1));
+		fread(name, sizeof(char), name_length, file_ptr);
+	}
+	
+	fread(&name_length, sizeof(int), 1, file_ptr);
+	if(name_length > 0) {
+		memset(name, 0x00, (name_length+1));
+		fread(name, sizeof(char), name_length, file_ptr);
+	}
+
+	int nFC = 0, nVC = 0, nUVC = 0;
+	fread(&nFC, sizeof(int), 1, file_ptr);
+	fread(&nVC, sizeof(int), 1, file_ptr);
+	fread(&nUVC, sizeof(int), 1, file_ptr);
+
+	if(nFC>0 && nVC>0) {
+		if(nFC<=0 || nVC<=0) return false;
+
+		skin_data.face_count = nFC;
+		skin_data.vert_count = nVC;
+
+		skin_data.verts = new N3VertexXyzNormal[nVC];
+		memset(skin_data.verts, 0, sizeof(N3VertexXyzNormal)*nVC);
+		skin_data.indices = new unsigned short[nFC*3];
+		memset(skin_data.indices, 0, 2*nFC*3);
+
+		if(nUVC > 0) {
+			skin_data.uv_count = nUVC;
+			skin_data.uvs = new float[nUVC*2];
+			memset(skin_data.uvs, 0, 8*nUVC);
+			skin_data.uv_indices = new unsigned short[nFC*3];
+			memset(skin_data.uv_indices, 0, 2*nFC*3);
+		}
+
+		fread(skin_data.verts, sizeof(N3VertexXyzNormal), nVC, file_ptr);
+		fread(skin_data.indices, 2*3, nFC, file_ptr);
+	}
+
+	if(skin_data.uv_count > 0) {
+		fread(skin_data.uvs, 8, nUVC, file_ptr);
+		fread(skin_data.uv_indices, 2*3, nFC, file_ptr);
+	}
+
+	fclose(file_ptr);
+
+	std::pair<std::map<std::string, SkinData>::iterator, bool> ret;
+	ret = _skin_data_map.insert(std::make_pair(filename, skin_data));
 	if(ret.second == false) {
 		SDL_Log("Duplicate!!\n");
 		exit(-1);

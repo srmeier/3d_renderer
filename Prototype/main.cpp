@@ -78,9 +78,23 @@ int SDL_main(int argc, char** argv) {
 
 	MeshData* mesh_data = ResourceManager::LoadMeshData("data/1_3561_00_0.n3pmesh");
 	TextureData* tex_data = ResourceManager::LoadTextureData("data/doubleaxe_02.dxt");
-
-	Mesh test_mesh(program, mesh_data, tex_data);
 	Mesh weapon(program, mesh_data, tex_data);
+
+	mesh_data = ResourceManager::LoadMeshData("data/1_7051_00_0.n3pmesh");
+	tex_data = ResourceManager::LoadTextureData("data/item_el_shield_lv2.dxt");
+	Mesh shield(program, mesh_data, tex_data);
+
+	SkinData* skin_data = ResourceManager::LoadSkinData("data/st_s_pulreton_3th_2010a01_uio.n3cskins");
+	tex_data = ResourceManager::LoadTextureData("data/st_s_pulreton_3th_2010a01_uio.dxt");
+	Mesh test_mesh(program, skin_data, tex_data); // new class?
+
+	skin_data = ResourceManager::LoadSkinData("data/st_s_pulreton_3th_2010a01_tyu.n3cskins");
+	tex_data = ResourceManager::LoadTextureData("data/st_s_pulreton_3th_2010a01_tyu.dxt");
+	Mesh test_mesh2(program, skin_data, tex_data); // new class?
+
+	skin_data = ResourceManager::LoadSkinData("data/st_s_pulreton_3th_2010a01_ser.n3cskins");
+	tex_data = ResourceManager::LoadTextureData("data/st_s_pulreton_3th_2010a01_ser.dxt");
+	Mesh test_mesh3(program, skin_data, tex_data); // new class?
 	//
 
 	SDL_Event event = {};
@@ -124,7 +138,7 @@ int SDL_main(int argc, char** argv) {
 
 		//
 		glm::vec3 tmp;
-		float camera_speed = 1.0f;
+		float camera_speed = 10.0f;
 
 		if(key_state[SDL_SCANCODE_A]) {
 			tmp = glm::vec3(glm::rotate(glm::mat4(), glm::radians(camera.getYaw()), glm::vec3(0.0f, 1.0f, 0.0f))*glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
@@ -155,7 +169,9 @@ int SDL_main(int argc, char** argv) {
 		//
 
 		//
-		test_mesh.setYaw(test_mesh.getYaw() + 1.0f);
+		test_mesh.setYaw(test_mesh.getYaw() + 0.75f);
+		test_mesh2.setYaw(test_mesh.getYaw() + 0.75f);
+		test_mesh3.setYaw(test_mesh.getYaw() + 0.75f);
 
 		weapon.setPos(camera.getPos());
 		tmp = glm::vec3(-0.15f, -0.55f, -0.6f);
@@ -165,6 +181,15 @@ int SDL_main(int argc, char** argv) {
 		weapon.setYaw(camera.getYaw());
 		weapon.setRoll(45.0f/2.0f);
 		weapon.setPitch(camera.getPitch());
+
+		shield.setPos(camera.getPos());
+		tmp = glm::vec3(0.27f, -0.55f, -0.6f);
+		tmp = glm::rotate(tmp, glm::radians(camera.getYaw()), glm::vec3(0.0f, 1.0f, 0.0f));
+		tmp = glm::rotate(tmp, glm::radians(camera.getPitch()), glm::rotate(glm::vec3(1.0f, 0.0f, 0.0f), glm::radians(camera.getYaw()), glm::vec3(0.0f, 1.0f, 0.0f)));
+		shield.translate(tmp);
+		shield.setYaw(camera.getYaw()+180.0f);
+		//shield.setRoll(45.0f/2.0f);
+		shield.setPitch(-camera.getPitch());
 		//
 
 		// ---- RENDER ----

@@ -13,7 +13,7 @@ Camera::Camera(SDL_Window* window) {
 	_window = window;
 	_framebuffer_w = 0;
 	_framebuffer_h = 0;
-	_pos = glm::vec3(0.f, 0.5f, 4.f);
+	_pos = glm::vec3(0.0f, 0.5f, 30.0f);
 	_yaw = 0.0f;
 	_pitch = 0.0f;
 	_roll = 0.0f;

@@ -60,6 +60,38 @@ enum D3DFORMAT {
 	D3DFMT_X8R8G8B8 = 22
 };
 
+struct N3VertexSkinned {
+	glm::vec3 vOrigin;
+	int nAffect;
+	int* pnJoints;
+	float* pfWeights;
+
+	N3VertexSkinned() {memset(this, 0, sizeof(N3VertexSkinned));}
+	~N3VertexSkinned() {delete [] pnJoints; delete [] pfWeights;}
+};
+
+struct N3VertexXyzNormal : public glm::vec3 {
+public:
+	glm::vec3 n;
+	
+public:
+	void Set(const glm::vec3& p, const glm::vec3& sn) {x = p.x; y = p.y; z = p.z; n = sn;}
+	void Set(float xx, float yy, float zz, float nxx, float nyy, float nzz) {
+		x = xx; y = yy; z = zz; n.x = nxx; n.y = nyy; n.z = nzz;
+	}
+
+	const N3VertexXyzNormal& operator = (const glm::vec3& vec) {
+		x = vec.x; y = vec.y; z = vec.z;
+		return *this;
+	}
+
+	N3VertexXyzNormal() {}
+	N3VertexXyzNormal(const glm::vec3& p, const glm::vec3& n) {this->Set(p, n);}
+	N3VertexXyzNormal(float sx, float sy, float sz, float xx, float yy, float zz) {
+		this->Set(sx, sy, sz, xx, yy, zz);
+	}
+};
+
 //-----------------------------------------------------------------------------
 char* load_file_into_buffer(const char* file_name);
 

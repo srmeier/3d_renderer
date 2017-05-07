@@ -13,8 +13,12 @@ private:
 	GLuint _tex_buffer;
 	MeshData* _mesh_data;
 	TextureData* _texture_data;
+	SkinData* _skin_data;
 	glm::vec3 _pos;
 	float _yaw, _pitch, _roll;
+
+private:
+	void _set_texture(class ShaderProgram* program, TextureData* texture_data);
 
 public:
 	void render(class ShaderProgram* program);
@@ -30,6 +34,7 @@ public:
 
 public:
 	Mesh(class ShaderProgram* program, MeshData* mesh_data, TextureData* texture_data);
+	Mesh(class ShaderProgram* program, SkinData* skin_data, TextureData* texture_data);
 	~Mesh(void);
 };
 
