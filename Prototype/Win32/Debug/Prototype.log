@@ -1,0 +1,17 @@
+﻿  shader_program.cpp
+c:\users\srmeier\documents\visual studio 2015\projects\3d_renderer\prototype\shader_program.cpp(16): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\string.h(119): note: see declaration of 'strcpy'
+  resource_manager.cpp
+c:\users\srmeier\documents\visual studio 2015\projects\3d_renderer\prototype\resource_manager.cpp(21): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
+c:\users\srmeier\documents\visual studio 2015\projects\3d_renderer\prototype\resource_manager.cpp(174): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
+  mesh.cpp
+  main.cpp
+  core.cpp
+c:\users\srmeier\documents\visual studio 2015\projects\3d_renderer\prototype\core.cpp(8): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+  c:\program files (x86)\windows kits\10\include\10.0.10240.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
+  camera.cpp
+  Generating Code...
+  Prototype.vcxproj -> C:\Users\srmeier\Documents\Visual Studio 2015\Projects\3d_renderer\Win32\Debug\Prototype.exe
+  Prototype.vcxproj -> C:\Users\srmeier\Documents\Visual Studio 2015\Projects\3d_renderer\Win32\Debug\Prototype.pdb (Full PDB)

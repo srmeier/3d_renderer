@@ -1,0 +1,6 @@
+﻿  testatomic.c
+..\..\..\test\testatomic.c(692): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+..\..\..\test\testatomic.c(695): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+..\..\..\test\testatomic.c(698): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+  testatomic.vcxproj -> C:\Users\srmeier\Desktop\SDL2-2.0.5\VisualC\x64\Debug\testatomic.exe
+  testatomic.vcxproj -> C:\Users\srmeier\Desktop\SDL2-2.0.5\VisualC\x64\Debug\testatomic.pdb (Full PDB)

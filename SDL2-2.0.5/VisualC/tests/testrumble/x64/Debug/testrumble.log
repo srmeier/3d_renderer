@@ -1,0 +1,4 @@
+﻿  testrumble.c
+..\..\..\test\testrumble.c(66): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+  testrumble.vcxproj -> C:\Users\srmeier\Desktop\SDL2-2.0.5\VisualC\x64\Debug\testrumble.exe
+  testrumble.vcxproj -> C:\Users\srmeier\Desktop\SDL2-2.0.5\VisualC\x64\Debug\testrumble.pdb (Full PDB)
