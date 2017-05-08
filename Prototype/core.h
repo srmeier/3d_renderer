@@ -7,6 +7,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include "SDL.h"
 #include "GL/glew.h"
@@ -58,6 +59,12 @@ enum D3DFORMAT {
 	D3DFMT_R8G8B8 = 20,
 	D3DFMT_A8R8G8B8 = 21,
 	D3DFMT_X8R8G8B8 = 22
+};
+
+enum ANIMATION_KEY_TYPE {
+	KEY_VECTOR3 = 0,
+	KEY_QUATERNION = 1,
+	KEY_UNKNOWN = 0xffffffff
 };
 
 struct N3VertexSkinned {

@@ -83,7 +83,9 @@ int SDL_main(int argc, char** argv) {
 	mesh_data = ResourceManager::LoadMeshData("data/1_7051_00_0.n3pmesh");
 	tex_data = ResourceManager::LoadTextureData("data/item_el_shield_lv2.dxt");
 	Mesh shield(program, mesh_data, tex_data);
+	//
 
+	//
 	SkinData* skin_data = ResourceManager::LoadSkinData("data/st_s_pulreton_3th_2010a01_uio.n3cskins");
 	tex_data = ResourceManager::LoadTextureData("data/st_s_pulreton_3th_2010a01_uio.dxt");
 	Mesh test_mesh(program, skin_data, tex_data); // new class?
@@ -95,6 +97,31 @@ int SDL_main(int argc, char** argv) {
 	skin_data = ResourceManager::LoadSkinData("data/st_s_pulreton_3th_2010a01_ser.n3cskins");
 	tex_data = ResourceManager::LoadTextureData("data/st_s_pulreton_3th_2010a01_ser.dxt");
 	Mesh test_mesh3(program, skin_data, tex_data); // new class?
+	//
+
+	//
+	skin_data = ResourceManager::LoadSkinData("data/mob_kecoon_foots.n3cskins");
+	tex_data = ResourceManager::LoadTextureData("data/npc_mob_devil_foots.dxt");
+	Mesh kecoon_feet(program, skin_data, tex_data);
+
+	skin_data = ResourceManager::LoadSkinData("data/mob_kecoon_hands.n3cskins");
+	tex_data = ResourceManager::LoadTextureData("data/npc_mob_devil_hands.dxt");
+	Mesh kecoon_hands(program, skin_data, tex_data);
+
+	skin_data = ResourceManager::LoadSkinData("data/mob_kecoon_head.n3cskins");
+	tex_data = ResourceManager::LoadTextureData("data/npc_mob_devil_face.dxt");
+	Mesh kecoon_head(program, skin_data, tex_data);
+
+	skin_data = ResourceManager::LoadSkinData("data/mob_kecoon_lower.n3cskins");
+	tex_data = ResourceManager::LoadTextureData("data/npc_mob_devil_lower.dxt");
+	Mesh kecoon_lower(program, skin_data, tex_data);
+
+	skin_data = ResourceManager::LoadSkinData("data/mob_kecoon_upper.n3cskins");
+	tex_data = ResourceManager::LoadTextureData("data/npc_mob_devil_upper.dxt");
+	Mesh kecoon_upper(program, skin_data, tex_data);
+
+	AnimData* anim_data = ResourceManager::LoadAnimData("data/mob_kecoon.n3anim");
+	JointData* joint_data = ResourceManager::LoadJointData("data/mob_kecoon.n3joint");
 	//
 
 	SDL_Event event = {};
@@ -172,7 +199,17 @@ int SDL_main(int argc, char** argv) {
 		test_mesh.setYaw(test_mesh.getYaw() + 0.75f);
 		test_mesh2.setYaw(test_mesh.getYaw() + 0.75f);
 		test_mesh3.setYaw(test_mesh.getYaw() + 0.75f);
+		//
 
+		//
+		kecoon_feet.setPos(glm::vec3(-15.0f, 0.0f, 0.0f));
+		kecoon_hands.setPos(glm::vec3(-15.0f, 0.0f, 0.0f));
+		kecoon_head.setPos(glm::vec3(-15.0f, 0.0f, 0.0f));
+		kecoon_lower.setPos(glm::vec3(-15.0f, 0.0f, 0.0f));
+		kecoon_upper.setPos(glm::vec3(-15.0f, 0.0f, 0.0f));
+		//
+
+		//
 		weapon.setPos(camera.getPos());
 		tmp = glm::vec3(-0.15f, -0.55f, -0.6f);
 		tmp = glm::rotate(tmp, glm::radians(camera.getYaw()), glm::vec3(0.0f, 1.0f, 0.0f));

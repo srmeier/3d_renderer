@@ -8,6 +8,8 @@
 std::map<std::string, MeshData> ResourceManager::_mesh_data_map;
 std::map<std::string, TextureData> ResourceManager::_texture_data_map;
 std::map<std::string, SkinData> ResourceManager::_skin_data_map;
+std::map<std::string, AnimData> ResourceManager::_anim_data_map;
+std::map<std::string, JointData> ResourceManager::_joint_data_map;
 
 //-----------------------------------------------------------------------------
 MeshData* ResourceManager::LoadMeshData(const std::string filename) {
@@ -301,6 +303,8 @@ SkinData* ResourceManager::LoadSkinData(const std::string filename) {
 		memset(skin_data.verts, 0, sizeof(N3VertexXyzNormal)*nVC);
 		skin_data.indices = new unsigned short[nFC*3];
 		memset(skin_data.indices, 0, 2*nFC*3);
+		skin_data.skinned_verts = new N3VertexSkinned[nVC];
+		memset(skin_data.skinned_verts, 0, sizeof(N3VertexSkinned)*nVC);
 
 		if(nUVC > 0) {
 			skin_data.uv_count = nUVC;
@@ -319,10 +323,129 @@ SkinData* ResourceManager::LoadSkinData(const std::string filename) {
 		fread(skin_data.uv_indices, 2*3, nFC, file_ptr);
 	}
 
+	for(int i=0; i<nVC; ++i) {
+		fread(&skin_data.skinned_verts[i], sizeof(N3VertexSkinned), 1, file_ptr);
+		skin_data.skinned_verts[i].pnJoints = NULL;
+		skin_data.skinned_verts[i].pfWeights = NULL;
+
+		int nAffect = skin_data.skinned_verts[i].nAffect;
+		if(nAffect > 1) {
+			skin_data.skinned_verts[i].pnJoints = new int[nAffect];
+			skin_data.skinned_verts[i].pfWeights = new float[nAffect];
+
+			fread(skin_data.skinned_verts[i].pnJoints, sizeof(int), nAffect, file_ptr);
+			fread(skin_data.skinned_verts[i].pfWeights, sizeof(float), nAffect, file_ptr);
+
+		} else if(nAffect == 1) {
+			skin_data.skinned_verts[i].pnJoints = new int[1];
+			fread(skin_data.skinned_verts[i].pnJoints, sizeof(int), 1, file_ptr);
+		}
+	}
+
 	fclose(file_ptr);
 
 	std::pair<std::map<std::string, SkinData>::iterator, bool> ret;
 	ret = _skin_data_map.insert(std::make_pair(filename, skin_data));
+	if(ret.second == false) {
+		SDL_Log("Duplicate!!\n");
+		exit(-1);
+	}
+
+	return &ret.first->second;
+}
+
+//-----------------------------------------------------------------------------
+AnimData* ResourceManager::LoadAnimData(const std::string filename) {
+	std::map<std::string, AnimData>::iterator iter;
+
+	iter = _anim_data_map.find(filename);
+	if(iter != _anim_data_map.end()) {
+		return &iter->second;
+	}
+
+	AnimData anim_data = {};
+	FILE* file_ptr = fopen(filename.c_str(), "rb");
+	if(file_ptr == NULL) {
+		SDL_Log("Missing anim \"%s\"\n", filename.c_str());
+		return NULL;
+	}
+
+	int count = 0;
+	fread(&count, sizeof(int), 1, file_ptr);
+
+	for(int i=0; i<count; ++i) {
+		int nl = 0;
+		fread(&nl, sizeof(int), 1, file_ptr);
+
+		float fFrmStart = 0.0f;
+		fread(&fFrmStart, sizeof(float), 1, file_ptr);
+		float fFrmEnd = 0.0f;
+		fread(&fFrmEnd, sizeof(float), 1, file_ptr);
+		float fFrmPerSec = 0.0f;
+		fread(&fFrmPerSec, sizeof(float), 1, file_ptr);
+
+		float fFrmPlugTraceStart = 0.0f;
+		fread(&fFrmPlugTraceStart, sizeof(float), 1, file_ptr);
+		float fFrmPlugTraceEnd = 0.0f;
+		fread(&fFrmPlugTraceEnd, sizeof(float), 1, file_ptr);
+
+		float fFrmSound0 = 0.0f;
+		fread(&fFrmSound0, sizeof(float), 1, file_ptr);
+		float fFrmSound1 = 0.0f;
+		fread(&fFrmSound1, sizeof(float), 1, file_ptr);
+
+		float fTimeBlend = 0.0f;
+		fread(&fTimeBlend, sizeof(float), 1, file_ptr);
+		int iBlendFlags = 0;
+		fread(&iBlendFlags, sizeof(int), 1, file_ptr);
+		float fFrmStrike0 = 0.0f;
+		fread(&fFrmStrike0, sizeof(float), 1, file_ptr);
+		float fFrmStrike1 = 0.0f;
+		fread(&fFrmStrike1, sizeof(float), 1, file_ptr);
+
+		int name_length = 0;
+		fread(&name_length, sizeof(int), 1, file_ptr);
+		char name[0xFF] = {};
+		if(name_length > 0) {
+			memset(name, 0x00, (name_length+1));
+			fread(name, sizeof(char), name_length, file_ptr);
+		}
+	}
+
+	fclose(file_ptr);
+
+	std::pair<std::map<std::string, AnimData>::iterator, bool> ret;
+	ret = _anim_data_map.insert(std::make_pair(filename, anim_data));
+	if(ret.second == false) {
+		SDL_Log("Duplicate!!\n");
+		exit(-1);
+	}
+
+	return &ret.first->second;
+}
+
+//-----------------------------------------------------------------------------
+JointData* ResourceManager::LoadJointData(const std::string filename) {
+	std::map<std::string, JointData>::iterator iter;
+
+	iter = _joint_data_map.find(filename);
+	if(iter != _joint_data_map.end()) {
+		return &iter->second;
+	}
+
+	JointData joint_data = {};
+	FILE* file_ptr = fopen(filename.c_str(), "rb");
+	if(file_ptr == NULL) {
+		SDL_Log("Missing joint \"%s\"\n", filename.c_str());
+		return NULL;
+	}
+
+	joint_data.load(file_ptr);
+
+	fclose(file_ptr);
+
+	std::pair<std::map<std::string, JointData>::iterator, bool> ret;
+	ret = _joint_data_map.insert(std::make_pair(filename, joint_data));
 	if(ret.second == false) {
 		SDL_Log("Duplicate!!\n");
 		exit(-1);
